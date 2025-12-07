@@ -1,2 +1,2 @@
-chạy server:  D:\Python\python.exe D:\Python_VsCode\Mid_Tern\server\run_server.py
-chạy client:  D:\Python\python.exe D:\Python_VsCode\Mid_Tern\client\run_client.py
+chạy server:  D:\Python\python.exe D:\Python_VsCode\Chat_Client-Server\server\run_server.py
+chạy client:  D:\Python\python.exe D:\Python_VsCode\Chat_Client-Server\client\run_client.py

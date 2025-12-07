@@ -15,203 +15,169 @@ class AuthController:
         self.client_socket = socket
         self.current_user_id = None
         self.reconnect_attempts = 3
-        self.message_queue = Queue()
-        self.response_queue = Queue()
+        self.message_queue = Queue()  # Queue chứa tin nhắn đến
+        self.response_queue = Queue()  # Queue chứa phản hồi request
         self.running = True
+
+        # Bắt đầu luồng nhận tin
         threading.Thread(target=self._receive_loop, daemon=True).start()
 
     def _send_all(self, sock, data):
-        """Gửi tất cả dữ liệu, đảm bảo gửi đủ"""
         total_sent = 0
         while total_sent < len(data):
             sent = sock.send(data[total_sent:])
-            if sent == 0:
-                raise socket.error("Socket connection broken")
+            if sent == 0: raise socket.error("Socket broken")
             total_sent += sent
-        return total_sent
 
     def _recv_all(self, sock, length):
-        """Nhận đủ số bytes cần thiết"""
         data = b''
         while len(data) < length:
-            chunk = sock.recv(min(length - len(data), 10485760))  # 10MB chunks
-            if not chunk:
-                raise socket.error("Socket connection broken")
+            chunk = sock.recv(min(length - len(data), 10485760))  # 10MB chunk
+            if not chunk: raise socket.error("Socket broken")
             data += chunk
         return data
 
     def _receive_loop(self):
-        """Thread riêng để nhận tất cả dữ liệu từ server"""
         while self.running:
             try:
-                if self.client_socket and self.client_socket.fileno() != -1:
-                    # Nhận length prefix (4 bytes)
+                if self.client_socket:
                     length_data = self._recv_all(self.client_socket, 4)
-                    if not length_data:
-                        print("Kết nối bị đóng bởi server")
-                        break
-                    
-                    # Unpack length
+                    if not length_data: break
                     data_length = struct.unpack('>I', length_data)[0]
-                    
-                    # Nhận đủ dữ liệu
-                    data = self._recv_all(self.client_socket, data_length)
-                    
-                    message = data.decode('utf-8')
-                    response = json.loads(message)
 
-                    # Phân loại message
-                    if response.get("action") == "message":
-                        # Tin nhắn chat từ người khác
+                    data = self._recv_all(self.client_socket, data_length)
+                    response = json.loads(data.decode('utf-8'))
+
+                    action = response.get("action")
+
+                    # DANH SÁCH CÁC ACTION TỰ ĐẨY VỀ (PUSH NOTIFICATION)
+                    push_actions = [
+                        "message",
+                        "group_message",
+                        "new_group",
+                        "profile_update_notification"  # <-- Mới thêm
+                    ]
+
+                    if action in push_actions:
                         self.message_queue.put(response)
                     else:
-                        # Response từ request
                         self.response_queue.put(response)
-                else:
-                    if not self.reconnect():
-                        break
-                    time.sleep(0.5)
-            except (socket.error, json.JSONDecodeError) as e:
-                print(f"Lỗi nhận dữ liệu: {str(e)}")
-                if not self.reconnect():
-                    break
-                time.sleep(0.5)
+
+            except (socket.error, json.JSONDecodeError):
+                if not self.reconnect(): break
+                time.sleep(1)
             except Exception as e:
-                print(f"Lỗi không xác định trong _receive_loop: {str(e)}")
+                print(f"Receive loop error: {e}")
                 break
 
     def reconnect(self):
-        """Thử kết nối lại với server"""
+        print("Mất kết nối, đang thử lại...")
+        try:
+            self.client_socket.close()
+        except:
+            pass
+
         for _ in range(self.reconnect_attempts):
             try:
                 self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.client_socket.connect((self.host, self.port))
-                print("Kết nối lại thành công")
-                # Gửi resume session nếu đã có user_id
-                try:
-                    if self.current_user_id is not None:
-                        resume_req = {"action": "resume_session", "user_id": self.current_user_id}
-                        data = json.dumps(resume_req).encode('utf-8')
-                        # Gửi với length prefix
-                        length = struct.pack('>I', len(data))
-                        self._send_all(self.client_socket, length + data)
-                        # Nhận phản hồi (nhỏ)
-                        length_data = self._recv_all(self.client_socket, 4)
-                        resp_length = struct.unpack('>I', length_data)[0]
-                        resp_data = self._recv_all(self.client_socket, resp_length)
-                        _ = json.loads(resp_data.decode('utf-8'))
-                except Exception:
-                    pass
+
+                if self.current_user_id:
+                    req = {"action": "resume_session", "user_id": self.current_user_id}
+                    d = json.dumps(req).encode('utf-8')
+                    l = struct.pack('>I', len(d))
+                    self.client_socket.send(l + d)
+
+                print("Kết nối lại thành công!")
                 return True
-            except socket.error as e:
-                print(f"Thử kết nối lại: {str(e)}")
-                time.sleep(1)
+            except:
+                time.sleep(2)
         return False
 
-    def send_request(self, request, timeout=10):
-        """Gửi request và đợi response"""
-        if not self.client_socket or self.client_socket.fileno() == -1:
-            if not self.reconnect():
-                raise Exception("Không thể kết nối lại với server")
-
+    def send_request(self, request, timeout=5):
         try:
-            # Xóa queue cũ
-            while not self.response_queue.empty():
-                self.response_queue.get_nowait()
+            with self.response_queue.mutex:
+                self.response_queue.queue.clear()
 
-            # Gửi request với length prefix
             data = json.dumps(request).encode('utf-8')
             length = struct.pack('>I', len(data))
             self._send_all(self.client_socket, length + data)
 
-            # Đợi response từ queue
-            try:
-                response = self.response_queue.get(timeout=timeout)
-                return response
-            except:
-                raise Exception(f"Không nhận được phản hồi sau {timeout}s")
+            return self.response_queue.get(timeout=timeout)
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
 
-        except socket.error as e:
-            raise Exception(f"Lỗi gửi request: {str(e)}")
-
+    # === APIs ===
     def get_users(self):
-        """Lấy danh sách users"""
-        request = {"action": "get_users"}
-        return self.send_request(request).get("users", [])
+        return self.send_request({"action": "get_users"}).get("users", [])
 
     def send_message(self, receiver_id, message):
-        """Gửi tin nhắn"""
-        request = {"action": "message", "receiver_id": receiver_id, "message": message}
-        return self.send_request(request)
+        return self.send_request({"action": "message", "receiver_id": receiver_id, "message": message})
 
     def send_image(self, receiver_id, image_data, filename):
-        """Gửi hình ảnh"""
-        request = {
-            "action": "send_image",
-            "receiver_id": receiver_id,
-            "image_data": image_data,
-            "filename": filename
-        }
-        return self.send_request(request, timeout=30)  # Timeout lớn hơn cho ảnh
+        return self.send_request({
+            "action": "send_image", "receiver_id": receiver_id,
+            "image_data": image_data, "filename": filename
+        }, timeout=20)
 
     def send_voice(self, receiver_id, voice_data, filename):
-        """Gửi tin nhắn voice"""
-        request = {
-            "action": "send_voice",
-            "receiver_id": receiver_id,
-            "voice_data": voice_data,
-            "filename": filename
-        }
-        return self.send_request(request, timeout=30)  # Timeout lớn cho voice
+        return self.send_request({
+            "action": "send_voice", "receiver_id": receiver_id,
+            "voice_data": voice_data, "filename": filename
+        }, timeout=20)
 
     def send_video(self, receiver_id, video_data, filename):
-        """Gửi video"""
-        request = {
-            "action": "send_video",
-            "receiver_id": receiver_id,
-            "video_data": video_data,
-            "filename": filename
-        }
-        return self.send_request(request, timeout=300)  # Timeout lớn cho video (5 phút)
-
-
+        return self.send_request({
+            "action": "send_video", "receiver_id": receiver_id,
+            "video_data": video_data, "filename": filename
+        }, timeout=120)
 
     def get_chat_history(self, receiver_id):
-        """Lấy lịch sử chat"""
-        request = {"action": "get_chat_history", "receiver_id": receiver_id}
-        response = self.send_request(request)
-        return response.get("history", [])
+        return self.send_request({"action": "get_chat_history", "receiver_id": receiver_id}).get("history", [])
 
-    # === Profile APIs ===
     def get_profile(self):
-        request = {"action": "get_profile"}
-        return self.send_request(request)
+        return self.send_request({"action": "get_profile"})
 
-    def update_profile(self, display_name=None, avatar=None):
-        request = {"action": "update_profile"}
-        if display_name is not None:
-            request["display_name"] = display_name
-        if avatar is not None:
-            request["avatar"] = avatar
-        return self.send_request(request)
-
-    def change_password(self, old_password, new_password):
-        request = {
-            "action": "change_password",
-            "old_password": old_password,
-            "new_password": new_password
+    def update_profile(self, display_name, avatar_data, old_password=None, new_password=None):
+        req = {
+            "action": "update_profile",
+            "display_name": display_name,
+            "avatar": avatar_data
         }
-        return self.send_request(request)
+        if new_password:
+            req["old_password"] = old_password
+            req["new_password"] = new_password
+        # Tăng timeout lên 30 giây vì avatar có thể rất lớn
+        return self.send_request(req, timeout=30)
+
+    def create_group(self, name, member_ids):
+        return self.send_request({"action": "create_group", "name": name, "members": member_ids})
+
+    def get_groups(self):
+        return self.send_request({"action": "get_groups"}).get("groups", [])
+
+    def send_group_message(self, group_id, message, is_image=False, image_data=None):
+        req = {
+            "action": "group_message",
+            "group_id": group_id,
+            "message": message,
+            "is_image": is_image,
+            "image_data": image_data
+        }
+        return self.send_request(req)
+
+    def get_group_chat_history(self, group_id):
+        return self.send_request({"action": "get_group_history", "group_id": group_id}).get("history", [])
 
     def get_incoming_message(self, timeout=0.1):
-        """Lấy tin nhắn incoming từ queue (non-blocking)"""
         try:
             return self.message_queue.get(timeout=timeout)
         except:
             return None
 
     def stop(self):
-        """Dừng controller"""
         self.running = False
-        if self.client_socket and self.client_socket.fileno() != -1:
+        try:
             self.client_socket.close()
+        except:
+            pass

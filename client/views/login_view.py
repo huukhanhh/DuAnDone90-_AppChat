@@ -1,17 +1,25 @@
 # client/views/login_view.py
-from PyQt5 import QtWidgets, QtCore, QtGui
+from PySide6 import QtWidgets, QtCore, QtGui
 import socket
-import json
-import struct
 from config.config import SERVER_CONFIG
+# Thêm import Controller
+from client.controllers.auth_controller_client import AuthController
 
 
 class LoginView(QtWidgets.QWidget):
     def __init__(self, app):
         super().__init__()
         self.app = app
+        self.controller = None  # Biến lưu controller
         self.setWindowTitle("Đăng nhập - Chat App")
         self.setGeometry(100, 100, 450, 550)
+        
+        # Center on screen
+        qr = self.frameGeometry()
+        cp = QtGui.QGuiApplication.primaryScreen().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
+
         self.setup_ui()
 
     def setup_ui(self):
@@ -38,13 +46,13 @@ class LoginView(QtWidgets.QWidget):
         container.setMaximumWidth(400)
 
         container_layout = QtWidgets.QVBoxLayout(container)
-        container_layout.setContentsMargins(40, 40, 40, 40)
-        container_layout.setSpacing(20)
+        container_layout.setContentsMargins(30, 30, 30, 30)
+        container_layout.setSpacing(10)
 
         # Logo/Icon
         icon_label = QtWidgets.QLabel("💬")
         icon_label.setStyleSheet("font-size: 60px; background: transparent;")
-        icon_label.setAlignment(QtCore.Qt.AlignCenter)
+        icon_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         container_layout.addWidget(icon_label)
 
         # Title
@@ -55,7 +63,7 @@ class LoginView(QtWidgets.QWidget):
             color: #2c3e50;
             background: transparent;
         """)
-        title.setAlignment(QtCore.Qt.AlignCenter)
+        title.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         container_layout.addWidget(title)
 
         subtitle = QtWidgets.QLabel("Chào mừng bạn trở lại!")
@@ -64,10 +72,10 @@ class LoginView(QtWidgets.QWidget):
             color: #7f8c8d;
             background: transparent;
         """)
-        subtitle.setAlignment(QtCore.Qt.AlignCenter)
+        subtitle.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         container_layout.addWidget(subtitle)
 
-        container_layout.addSpacing(20)
+        container_layout.addSpacing(10)
 
         # Email input
         email_label = QtWidgets.QLabel("📧 Email")
@@ -83,6 +91,7 @@ class LoginView(QtWidgets.QWidget):
                 border: 2px solid #e0e0e0;
                 border-radius: 15px;
                 background-color: white;
+                color: #2c3e50;
             }
             QLineEdit:focus {
                 border: 2px solid #667eea;
@@ -96,7 +105,7 @@ class LoginView(QtWidgets.QWidget):
         container_layout.addWidget(password_label)
 
         self.password_input = QtWidgets.QLineEdit()
-        self.password_input.setEchoMode(QtWidgets.QLineEdit.Password)
+        self.password_input.setEchoMode(QtWidgets.QLineEdit.EchoMode.Password)
         self.password_input.setPlaceholderText("Nhập mật khẩu")
         self.password_input.setStyleSheet("""
             QLineEdit {
@@ -105,6 +114,7 @@ class LoginView(QtWidgets.QWidget):
                 border: 2px solid #e0e0e0;
                 border-radius: 15px;
                 background-color: white;
+                color: #2c3e50;
             }
             QLineEdit:focus {
                 border: 2px solid #667eea;
@@ -116,7 +126,7 @@ class LoginView(QtWidgets.QWidget):
         # Status label
         self.status_label = QtWidgets.QLabel("")
         self.status_label.setStyleSheet("color: #e74c3c; font-size: 12px; background: transparent;")
-        self.status_label.setAlignment(QtCore.Qt.AlignCenter)
+        self.status_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.status_label.setWordWrap(True)
         container_layout.addWidget(self.status_label)
 
@@ -144,13 +154,13 @@ class LoginView(QtWidgets.QWidget):
             }
         """)
         self.login_button.clicked.connect(self.login)
-        self.login_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.login_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
         container_layout.addWidget(self.login_button)
 
         # Divider
         divider_layout = QtWidgets.QHBoxLayout()
         line1 = QtWidgets.QFrame()
-        line1.setFrameShape(QtWidgets.QFrame.HLine)
+        line1.setFrameShape(QtWidgets.QFrame.Shape.HLine)
         line1.setStyleSheet("background-color: #e0e0e0;")
         divider_layout.addWidget(line1)
 
@@ -159,7 +169,7 @@ class LoginView(QtWidgets.QWidget):
         divider_layout.addWidget(or_label)
 
         line2 = QtWidgets.QFrame()
-        line2.setFrameShape(QtWidgets.QFrame.HLine)
+        line2.setFrameShape(QtWidgets.QFrame.Shape.HLine)
         line2.setStyleSheet("background-color: #e0e0e0;")
         divider_layout.addWidget(line2)
 
@@ -187,7 +197,7 @@ class LoginView(QtWidgets.QWidget):
             }
         """)
         self.register_button.clicked.connect(self.go_to_register)
-        self.register_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.register_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
         container_layout.addWidget(self.register_button)
 
         # Center container in main layout
@@ -210,47 +220,42 @@ class LoginView(QtWidgets.QWidget):
             return
 
         try:
+            # 1. Tạo socket và kết nối
             client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             client_socket.connect((SERVER_CONFIG["host"], SERVER_CONFIG["port"]))
-            client_socket.settimeout(10)
 
+            # 2. KHỞI TẠO CONTROLLER NGAY TẠI ĐÂY
+            # Controller sẽ tự động bắt đầu thread nhận dữ liệu
+            self.controller = AuthController(client_socket)
+
+            # 3. Gửi request Login thông qua Controller (thay vì gửi socket trần)
             request = {
                 "action": "login",
                 "email": email,
                 "password": password
             }
-            # Gửi với length prefix
-            data = json.dumps(request).encode('utf-8')
-            length = struct.pack('>I', len(data))
-            client_socket.send(length + data)
-            
-            # Nhận với length prefix
-            length_data = client_socket.recv(4)
-            if len(length_data) < 4:
-                raise socket.error("Không nhận đủ dữ liệu")
-            resp_length = struct.unpack('>I', length_data)[0]
-            resp_data = b''
-            while len(resp_data) < resp_length:
-                chunk = client_socket.recv(min(resp_length - len(resp_data), 10485760))
-                if not chunk:
-                    raise socket.error("Kết nối bị đóng")
-                resp_data += chunk
-            response = json.loads(resp_data.decode('utf-8'))
+            # Sử dụng send_request của controller để đảm bảo thread-safe
+            response = self.controller.send_request(request)
 
             if response.get("status") == "success":
                 user_id = response.get("user_id")
                 display_name = response.get("display_name")
-                self.app.show_main(client_socket, user_id, display_name)
+
+                # 4. TRUYỀN CONTROLLER (đã khởi tạo) SANG MAIN
+                # Lưu ý: Cần chắc chắn bạn đã sửa main.py để nhận tham số này
+                self.app.show_main(self.controller, user_id, display_name)
+
+                # Đóng cửa sổ login (App main sẽ mở)
+                self.close()
             else:
                 self.status_label.setText(f"❌ {response.get('message')}")
-                client_socket.close()
+                # Nếu login thất bại thì dừng controller để đóng socket, tránh treo
+                self.controller.stop()
 
-        except socket.error as e:
-            self.status_label.setText(f"🔌 Lỗi kết nối: {str(e)}")
-        except json.JSONDecodeError:
-            self.status_label.setText("⚠️ Lỗi phản hồi từ server")
         except Exception as e:
             self.status_label.setText(f"❌ Lỗi: {str(e)}")
+            if self.controller:
+                self.controller.stop()
 
     def go_to_register(self):
         self.app.show_register()

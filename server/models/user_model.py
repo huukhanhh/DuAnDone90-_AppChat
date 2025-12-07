@@ -287,3 +287,73 @@ class UserModel:
             logger.info("Database connection closed")
         except Exception as e:
             logger.error(f"Error closing database connection: {e}")
+
+    def create_group(self, name, owner_id, member_ids):
+        try:
+            # Tạo nhóm
+            self.cursor.execute("INSERT INTO `groups` (name, owner_id) VALUES (%s, %s)", (name, owner_id))
+            group_id = self.cursor.lastrowid
+
+            # Thêm thành viên (bao gồm cả owner)
+            all_members = set(member_ids)
+            all_members.add(owner_id)
+            values = [(group_id, uid) for uid in all_members]
+            self.cursor.executemany("INSERT INTO group_members (group_id, user_id) VALUES (%s, %s)", values)
+
+            # Tin nhắn hệ thống báo tạo nhóm
+            self.save_group_message(group_id, None, f"Nhóm '{name}' đã được tạo", is_system=True)
+
+            self.connection.commit()
+            return {"status": "success", "group_id": group_id, "members": list(all_members)}
+        except Exception as e:
+            self.connection.rollback()
+            return {"status": "error", "message": str(e)}
+
+    def get_user_groups(self, user_id):
+        try:
+            query = """
+                SELECT g.id, g.name, g.avatar_data 
+                FROM `groups` g
+                JOIN group_members gm ON g.id = gm.group_id
+                WHERE gm.user_id = %s
+            """
+            self.cursor.execute(query, (user_id,))
+            groups = []
+            for row in self.cursor.fetchall():
+                groups.append({"id": row[0], "name": row[1], "avatar": row[2]})
+            return groups
+        except Exception:
+            return []
+
+    def get_group_members(self, group_id):
+        self.cursor.execute("SELECT user_id FROM group_members WHERE group_id = %s", (group_id,))
+        return [row[0] for row in self.cursor.fetchall()]
+
+    def save_group_message(self, group_id, sender_id, message, is_image=False, image_data=None, is_system=False):
+        try:
+            query = """INSERT INTO group_messages (group_id, sender_id, message, is_image, image_data, is_system) 
+                       VALUES (%s, %s, %s, %s, %s, %s)"""
+            self.cursor.execute(query, (group_id, sender_id, message, is_image, image_data, is_system))
+            self.connection.commit()
+        except Exception as e:
+            print(f"Error saving group msg: {e}")
+
+    def get_group_chat_history(self, group_id):
+        try:
+            query = """
+                SELECT gm.sender_id, u.display_name, u.avatar_data, gm.message, 
+                       gm.is_image, gm.image_data, gm.is_system
+                FROM group_messages gm
+                LEFT JOIN users u ON gm.sender_id = u.id
+                WHERE gm.group_id = %s ORDER BY gm.timestamp ASC
+            """
+            self.cursor.execute(query, (group_id,))
+            history = []
+            for row in self.cursor.fetchall():
+                history.append({
+                    "sender_id": row[0], "sender_name": row[1], "sender_avatar": row[2],
+                    "message": row[3], "is_image": bool(row[4]), "image_data": row[5], "is_system": bool(row[6])
+                })
+            return history
+        except Exception:
+            return []

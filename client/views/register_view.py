@@ -1,5 +1,5 @@
 # client/views/register_view.py
-from PyQt5 import QtWidgets, QtCore, QtGui
+from PySide6 import QtWidgets, QtCore, QtGui
 import socket
 import json
 import struct
@@ -13,6 +13,13 @@ class RegisterView(QtWidgets.QWidget):
         self.app = app
         self.setWindowTitle("Đăng ký - Chat App")
         self.setGeometry(100, 100, 450, 650)
+        
+        # Center on screen
+        qr = self.frameGeometry()
+        cp = QtGui.QGuiApplication.primaryScreen().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
+        
         self.setup_ui()
 
     def setup_ui(self):
@@ -39,13 +46,13 @@ class RegisterView(QtWidgets.QWidget):
         container.setMaximumWidth(400)
 
         container_layout = QtWidgets.QVBoxLayout(container)
-        container_layout.setContentsMargins(40, 40, 40, 40)
-        container_layout.setSpacing(15)
+        container_layout.setContentsMargins(30, 30, 30, 30)
+        container_layout.setSpacing(10)
 
         # Logo/Icon
         icon_label = QtWidgets.QLabel("✨")
         icon_label.setStyleSheet("font-size: 50px; background: transparent;")
-        icon_label.setAlignment(QtCore.Qt.AlignCenter)
+        icon_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         container_layout.addWidget(icon_label)
 
         # Title
@@ -56,7 +63,7 @@ class RegisterView(QtWidgets.QWidget):
             color: #2c3e50;
             background: transparent;
         """)
-        title.setAlignment(QtCore.Qt.AlignCenter)
+        title.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         container_layout.addWidget(title)
 
         subtitle = QtWidgets.QLabel("Tham gia cùng chúng tôi!")
@@ -65,10 +72,10 @@ class RegisterView(QtWidgets.QWidget):
             color: #7f8c8d;
             background: transparent;
         """)
-        subtitle.setAlignment(QtCore.Qt.AlignCenter)
+        subtitle.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         container_layout.addWidget(subtitle)
 
-        container_layout.addSpacing(15)
+        container_layout.addSpacing(10)
 
         # Display Name input
         name_label = QtWidgets.QLabel("👤 Tên hiển thị")
@@ -96,7 +103,7 @@ class RegisterView(QtWidgets.QWidget):
         container_layout.addWidget(password_label)
 
         self.password_input = QtWidgets.QLineEdit()
-        self.password_input.setEchoMode(QtWidgets.QLineEdit.Password)
+        self.password_input.setEchoMode(QtWidgets.QLineEdit.EchoMode.Password)
         self.password_input.setPlaceholderText("Tối thiểu 6 ký tự")
         self.password_input.setStyleSheet(self._get_input_style())
         container_layout.addWidget(self.password_input)
@@ -107,7 +114,7 @@ class RegisterView(QtWidgets.QWidget):
         container_layout.addWidget(confirm_label)
 
         self.confirm_password_input = QtWidgets.QLineEdit()
-        self.confirm_password_input.setEchoMode(QtWidgets.QLineEdit.Password)
+        self.confirm_password_input.setEchoMode(QtWidgets.QLineEdit.EchoMode.Password)
         self.confirm_password_input.setPlaceholderText("Nhập lại mật khẩu")
         self.confirm_password_input.setStyleSheet(self._get_input_style())
         self.confirm_password_input.returnPressed.connect(self.register)
@@ -116,7 +123,7 @@ class RegisterView(QtWidgets.QWidget):
         # Status label
         self.status_label = QtWidgets.QLabel("")
         self.status_label.setStyleSheet("color: #e74c3c; font-size: 12px; background: transparent;")
-        self.status_label.setAlignment(QtCore.Qt.AlignCenter)
+        self.status_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.status_label.setWordWrap(True)
         container_layout.addWidget(self.status_label)
 
@@ -144,13 +151,13 @@ class RegisterView(QtWidgets.QWidget):
             }
         """)
         self.register_button.clicked.connect(self.register)
-        self.register_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.register_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
         container_layout.addWidget(self.register_button)
 
         # Divider
         divider_layout = QtWidgets.QHBoxLayout()
         line1 = QtWidgets.QFrame()
-        line1.setFrameShape(QtWidgets.QFrame.HLine)
+        line1.setFrameShape(QtWidgets.QFrame.Shape.HLine)
         line1.setStyleSheet("background-color: #e0e0e0;")
         divider_layout.addWidget(line1)
 
@@ -159,7 +166,7 @@ class RegisterView(QtWidgets.QWidget):
         divider_layout.addWidget(or_label)
 
         line2 = QtWidgets.QFrame()
-        line2.setFrameShape(QtWidgets.QFrame.HLine)
+        line2.setFrameShape(QtWidgets.QFrame.Shape.HLine)
         line2.setStyleSheet("background-color: #e0e0e0;")
         divider_layout.addWidget(line2)
 
@@ -187,7 +194,7 @@ class RegisterView(QtWidgets.QWidget):
             }
         """)
         self.back_button.clicked.connect(self.go_to_login)
-        self.back_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.back_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
         container_layout.addWidget(self.back_button)
 
         # Center container in main layout
@@ -209,6 +216,7 @@ class RegisterView(QtWidgets.QWidget):
                 border: 2px solid #e0e0e0;
                 border-radius: 15px;
                 background-color: white;
+                color: #2c3e50;
             }
             QLineEdit:focus {
                 border: 2px solid #f093fb;
@@ -277,7 +285,7 @@ class RegisterView(QtWidgets.QWidget):
                 msg_box = QtWidgets.QMessageBox(self)
                 msg_box.setWindowTitle("Thành công")
                 msg_box.setText("Đăng ký thành công! Vui lòng đăng nhập.")
-                msg_box.setIcon(QtWidgets.QMessageBox.Information)
+                msg_box.setIcon(QtWidgets.QMessageBox.Icon.Information)
                 msg_box.setStyleSheet("""
                     QMessageBox {
                         background-color: white;
@@ -292,7 +300,7 @@ class RegisterView(QtWidgets.QWidget):
                         font-weight: bold;
                     }
                 """)
-                msg_box.exec_()
+                msg_box.exec()
 
                 self.app.show_login()
             else:

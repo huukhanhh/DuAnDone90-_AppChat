@@ -1,4 +1,6 @@
 # config/config.py
+
+GEMINI_API_KEY = "AIzaSyCbC_gKgN383w4MLX2SzqOsxGsGc_qyDQo"  # Thay thế bằng API Key của bạn
 DATABASE_CONFIG = {
     "host": "localhost",
     "user": "root",
@@ -7,7 +9,7 @@ DATABASE_CONFIG = {
 }
 
 SERVER_CONFIG = {
-    "host": "10.50.192.2",  # IP chung
+    "host": "192.168.243.1",  # IP chung
     "port": 5001         # Port cho socket TCP
 }
 
