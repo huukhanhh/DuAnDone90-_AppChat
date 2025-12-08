@@ -105,12 +105,12 @@ class UserModel:
             logger.error(f"Database error during login: {err}")
             return {"status": "error", "message": f"Lỗi database: {err}"}
 
-    def save_message(self, sender_id, receiver_id, message):
+    def save_message(self, sender_id, receiver_id, message, is_call_log=False):
         try:
-            query = "INSERT INTO chat_messages (sender_id, receiver_id, message, is_image) VALUES (%s, %s, %s, %s)"
-            self.cursor.execute(query, (sender_id, receiver_id, message, False))
+            query = "INSERT INTO chat_messages (sender_id, receiver_id, message, is_image, is_call_log) VALUES (%s, %s, %s, %s, %s)"
+            self.cursor.execute(query, (sender_id, receiver_id, message, False, is_call_log))
             self.connection.commit()
-            logger.debug(f"Message saved: {sender_id} -> {receiver_id}")
+            logger.debug(f"Message saved: {sender_id} -> {receiver_id} (CallLog: {is_call_log})")
         except mysql.connector.Error as err:
             logger.error(f"Error saving message: {err}")
 
@@ -157,7 +157,7 @@ class UserModel:
     def get_chat_history(self, sender_id, receiver_id):
         try:
             query = """
-                    SELECT sender_id, message, timestamp, is_image, image_data, is_voice, voice_data, is_video, video_data
+                    SELECT sender_id, message, timestamp, is_image, image_data, is_voice, voice_data, is_video, video_data, is_call_log
                     FROM chat_messages
                     WHERE (sender_id = %s AND receiver_id = %s)
                        OR (sender_id = %s AND receiver_id = %s)
@@ -174,7 +174,8 @@ class UserModel:
                     "timestamp": str(row[2]),
                     "is_image": bool(row[3]) if row[3] is not None else False,
                     "is_voice": bool(row[5]) if row[5] is not None else False,
-                    "is_video": bool(row[7]) if len(row) > 7 and row[7] is not None else False
+                    "is_video": bool(row[7]) if len(row) > 7 and row[7] is not None else False,
+                    "is_call_log": bool(row[9]) if len(row) > 9 and row[9] is not None else False
                 }
 
                 if msg["is_image"]:

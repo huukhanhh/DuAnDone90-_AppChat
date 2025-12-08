@@ -21,6 +21,7 @@ from client.controllers.auth_controller_client import AuthController
 from client.views.profile_view import ProfileDialog
 from client.views.create_group_dialog import CreateGroupDialog
 from client.views.ai_chat_view import AIChatView
+from client.views.call_dialog import IncomingCallDialog, ActiveCallDialog
 
 
 # --- GIỮ NGUYÊN CÁC CLASS CON: ChatListItem, VoiceMessageWidget, ClickableLabel, VideoMessageWidget ---
@@ -184,38 +185,127 @@ class VideoMessageWidget(QtWidgets.QWidget):
         super().__init__(parent)
         self.video_data = video_data_base64
         self.temp_file = None
+        
         self.media_player = QtMultimedia.QMediaPlayer()
+        self.audio_output = QtMultimedia.QAudioOutput()
+        self.media_player.setAudioOutput(self.audio_output)
+        self.audio_output.setVolume(1.0)
+
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
+        
+        # Video Container
         container = QtWidgets.QWidget()
         container.setFixedSize(300, 200)
         container.setStyleSheet("background: black; border-radius: 10px;")
-        l = QtWidgets.QVBoxLayout(container);
+        l = QtWidgets.QVBoxLayout(container)
         l.setContentsMargins(0, 0, 0, 0)
+        
         if HAS_VIDEO_WIDGET:
             vw = QtMultimediaWidgets.QVideoWidget()
             l.addWidget(vw)
             self.media_player.setVideoOutput(vw)
         else:
             l.addWidget(QtWidgets.QLabel("No Video Widget", alignment=QtCore.Qt.AlignmentFlag.AlignCenter))
+            
         layout.addWidget(container)
-        btn = QtWidgets.QPushButton("Play/Pause")
-        btn.clicked.connect(self.toggle)
-        layout.addWidget(btn)
+
+        # Controls Area
+        controls = QtWidgets.QWidget()
+        controls.setFixedWidth(300)
+        c_layout = QtWidgets.QHBoxLayout(controls)
+        c_layout.setContentsMargins(5, 5, 5, 5)
+
+        self.play_btn = QtWidgets.QPushButton("▶")
+        self.play_btn.setFixedSize(30, 30)
+        self.play_btn.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
+        self.play_btn.setStyleSheet("""
+            QPushButton { border: none; font-size: 18px; color: #667eea; background: transparent; }
+            QPushButton:hover { color: #5a6fd6; }
+        """)
+        self.play_btn.clicked.connect(self.toggle)
+        c_layout.addWidget(self.play_btn)
+
+        self.slider = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal)
+        self.slider.setRange(0, 0)
+        self.slider.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
+        self.slider.setStyleSheet("""
+            QSlider::groove:horizontal { border: 1px solid #ddd; height: 4px; border-radius: 2px; background: #ddd; }
+            QSlider::handle:horizontal { background: #667eea; width: 12px; height: 12px; margin: -4px 0; border-radius: 6px; }
+            QSlider::sub-page:horizontal { background: #667eea; border-radius: 2px; }
+        """)
+        self.slider.sliderMoved.connect(self.set_position)
+        self.slider.sliderPressed.connect(self.pause_for_seek)
+        self.slider.sliderReleased.connect(self.end_seek)
+        c_layout.addWidget(self.slider)
+
+        layout.addWidget(controls)
+
+        self.media_player.playbackStateChanged.connect(self.update_state)
+        self.media_player.positionChanged.connect(self.update_slider)
+        self.media_player.durationChanged.connect(self.update_duration)
+        self.media_player.mediaStatusChanged.connect(self.handle_media_status)
+        self.media_player.errorOccurred.connect(self.handle_error)
+
+        self.thumbnail_shown = False
         self.create_temp()
 
     def create_temp(self):
         import tempfile, hashlib
-        h = hashlib.md5(self.video_data[:100].encode()).hexdigest()
-        self.temp_file = os.path.join(tempfile.gettempdir(), f"vid_{h}.mp4")
-        if not os.path.exists(self.temp_file):
-            with open(self.temp_file, 'wb') as f: f.write(base64.b64decode(self.video_data))
-        self.media_player.setSource(QtCore.QUrl.fromLocalFile(self.temp_file))
+        try:
+            h = hashlib.md5(self.video_data[:100].encode()).hexdigest()
+            self.temp_file = os.path.join(tempfile.gettempdir(), f"vid_{h}.mp4")
+            if not os.path.exists(self.temp_file):
+                with open(self.temp_file, 'wb') as f: f.write(base64.b64decode(self.video_data))
+            self.media_player.setSource(QtCore.QUrl.fromLocalFile(self.temp_file))
+        except Exception as e:
+            print(f"Video Data Error: {e}")
+
+    def handle_media_status(self, status):
+        if status == QtMultimedia.QMediaPlayer.MediaStatus.LoadedMedia and not self.thumbnail_shown:
+            # Trick to show first frame
+            self.media_player.play()
+            QtCore.QTimer.singleShot(150, self.media_player.pause)
+            self.thumbnail_shown = True
+    
+    def handle_error(self):
+        err_msg = self.media_player.errorString()
+        print(f"Video Error: {err_msg}")
+        # Could show a label, but for now just print to console to debug corruption
 
     def toggle(self):
-        if self.media_player.playbackState() == QtMultimedia.QMediaPlayer.PlaybackState.PlayingState:
+        if self.playback_state == QtMultimedia.QMediaPlayer.PlaybackState.PlayingState:
             self.media_player.pause()
         else:
+            self.media_player.play()
+
+    @property
+    def playback_state(self):
+        return self.media_player.playbackState()
+
+    def update_state(self, state):
+        if state == QtMultimedia.QMediaPlayer.PlaybackState.PlayingState:
+            self.play_btn.setText("⏸")
+        else:
+            self.play_btn.setText("▶")
+
+    def update_slider(self, position):
+        if not self.slider.isSliderDown():
+            self.slider.setValue(position)
+
+    def update_duration(self, duration):
+        self.slider.setRange(0, duration)
+
+    def set_position(self, position):
+        self.media_player.setPosition(position)
+
+    def pause_for_seek(self):
+        self.was_playing = (self.playback_state == QtMultimedia.QMediaPlayer.PlaybackState.PlayingState)
+        self.media_player.pause()
+
+    def end_seek(self):
+        self.set_position(self.slider.value())
+        if getattr(self, 'was_playing', False):
             self.media_player.play()
 
     def cleanup(self):
@@ -235,6 +325,7 @@ class MainView(QtWidgets.QMainWindow):
     message_received = QtCore.Signal(str, str, str, int, int, str)  # content, sender_name, message_type, target_id, sender_id, sender_avatar
     profile_updated_signal = QtCore.Signal(int, str)  # uid, name (không gửi avatar qua signal)
     new_group_signal = QtCore.Signal()
+    signal_received = QtCore.Signal(dict) # New signal for P2P events
 
     def __init__(self, app, controller, user_id, display_name):
         super().__init__()
@@ -304,12 +395,15 @@ class MainView(QtWidgets.QMainWindow):
         self.message_received.connect(self.display_incoming_message)
         self.profile_updated_signal.connect(self.handle_profile_update_ui)
         self.new_group_signal.connect(self.load_groups)
+        self.signal_received.connect(self.on_signal_received) # Connect new signal
 
         self.current_receiver_id = None
         self.current_receiver_name = None
         self.self_avatar = None
         self.user_avatars = {}
         self.user_names = {}  # Cache tên hiển thị của user
+        self.active_call_dialog = None # Track active call dialog
+        self.incoming_dialog = None # Track incoming call dialog
 
         self.is_recording = False
         self.frames = []
@@ -430,6 +524,20 @@ class MainView(QtWidgets.QMainWindow):
         self.header_label = QtWidgets.QLabel("Chọn một người để chat")
         self.header_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #2c3e50;")
         h_layout.addWidget(self.header_label)
+        
+        h_layout.addStretch()
+        
+        # Call Button (Top Right)
+        self.btn_call_header = QtWidgets.QPushButton("📞")
+        self.btn_call_header.setFixedSize(40, 40)
+        self.btn_call_header.setStyleSheet("""
+            QPushButton { background-color: #f0f2f5; border-radius: 20px; font-size: 20px; color: #667eea; border: none; }
+            QPushButton:hover { background-color: #e4e6eb; }
+        """)
+        self.btn_call_header.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
+        self.btn_call_header.clicked.connect(self.start_call)
+        h_layout.addWidget(self.btn_call_header)
+
         layout.addWidget(self.chat_header)
 
         self.chat_scroll = QtWidgets.QScrollArea()
@@ -477,6 +585,12 @@ class MainView(QtWidgets.QMainWindow):
         self.btn_vid = self._create_icon_button("🎬", "#8e44ad", "Gửi video")
         self.btn_vid.clicked.connect(self.send_video)
         inp_layout.addWidget(self.btn_vid)
+        
+        # Call Button Removed from here
+        # self.btn_call = self._create_icon_button("📞", "#2ecc71", "Gọi điện")
+        # self.btn_call.clicked.connect(self.start_call)
+        # inp_layout.addWidget(self.btn_call)
+
         self.btn_mic = self._create_icon_button("🎤", "#ff6b6b", "Giữ để ghi âm")
         self.btn_mic.pressed.connect(self.start_recording)
         self.btn_mic.released.connect(self.stop_recording)
@@ -516,7 +630,9 @@ class MainView(QtWidgets.QMainWindow):
         self.btn_chat_group.setStyleSheet("background-color: transparent; border: none; font-size: 24px;")
         self.btn_ai_chat.setStyleSheet("background-color: transparent; border: none; font-size: 24px;")
         self.btn_add_group.hide()
+        self.btn_add_group.hide()
         self.header_label.setText("Chọn một người để chat")
+        if hasattr(self, 'btn_call_header'): self.btn_call_header.hide()
         self.load_users()
 
     def switch_to_group_mode(self):
@@ -528,7 +644,9 @@ class MainView(QtWidgets.QMainWindow):
         self.btn_chat_one.setStyleSheet("background-color: transparent; border: none; font-size: 24px;")
         self.btn_ai_chat.setStyleSheet("background-color: transparent; border: none; font-size: 24px;")
         self.btn_add_group.show()
+        self.btn_add_group.show()
         self.header_label.setText("Chọn một nhóm để chat")
+        if hasattr(self, 'btn_call_header'): self.btn_call_header.hide()
         self.load_groups()
 
     def _clear_chat_ui(self):
@@ -675,6 +793,15 @@ class MainView(QtWidgets.QMainWindow):
         icon = "👥" if item_type == "group" else "💬"
         self.header_label.setText(f"{icon} {display_name}")
 
+        # Hide Call Button for Group Logic
+        if hasattr(self, 'btn_call_header'):
+            if item_type == "group":
+                self.btn_call_header.hide()
+            else:
+                # Also hide call button if it's the AI chatbot (assuming id=0 or specific check)
+                # But for now, just User vs Group.
+                self.btn_call_header.show()
+
         for i in reversed(range(self.chat_messages_layout.count())):
             item = self.chat_messages_layout.itemAt(i)
             if item.widget():
@@ -721,6 +848,8 @@ class MainView(QtWidgets.QMainWindow):
                     self.add_message_to_chat(msg["voice_data"], name, is_self, is_voice=True, avatar_base64=avatar)
                 elif msg.get("is_video"):
                     self.add_message_to_chat(msg["video_data"], name, is_self, is_video=True, avatar_base64=avatar)
+                elif msg.get("is_call_log"): 
+                    self.add_message_to_chat(msg["message"], name, is_self, is_call_log=True, avatar_base64=avatar)
                 elif msg.get("is_system"):
                     self.add_system_message(msg["message"])
                 else:
@@ -736,10 +865,10 @@ class MainView(QtWidgets.QMainWindow):
         js = self.chat_scroll.verticalScrollBar()
         js.setValue(js.maximum())
 
-    def add_message_to_chat(self, message, sender_name, is_self=False, is_image=False, is_voice=False, is_video=False,
+    def add_message_to_chat(self, message, sender_name, is_self=False, is_image=False, is_voice=False, is_video=False, is_call_log=False,
                             avatar_base64=None):
         try:
-            bubble = self.create_message_bubble(message, sender_name, is_self, is_image, is_voice, is_video,
+            bubble = self.create_message_bubble(message, sender_name, is_self, is_image, is_voice, is_video, is_call_log,
                                                 avatar_base64)
             self.chat_messages_layout.insertWidget(self.chat_messages_layout.count() - 1, bubble)
             QtCore.QTimer.singleShot(100, lambda: self.chat_scroll.verticalScrollBar().setValue(
@@ -747,10 +876,50 @@ class MainView(QtWidgets.QMainWindow):
         except Exception as e:
             print(f"Lỗi add msg: {e}")
 
-    def create_message_bubble(self, message, sender_name, is_self, is_image, is_voice, is_video, avatar_base64):
+    def create_message_bubble(self, message, sender_name, is_self, is_image, is_voice, is_video, is_call_log, avatar_base64):
         bubble_widget = QtWidgets.QWidget()
         bubble_layout = QtWidgets.QHBoxLayout(bubble_widget)
-        bubble_layout.setContentsMargins(0, 0, 0, 0)
+        bubble_layout.setContentsMargins(0, 5, 0, 5) # Increased margins
+        
+        # SYSTEM / CALL LOG STYLE
+        if is_call_log:
+            lbl = QtWidgets.QLabel(message)
+            lbl.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+            lbl.setStyleSheet("""
+                font-size: 11px; 
+                background-color: #ecf0f1; 
+                padding: 4px 12px; 
+                border-radius: 10px;
+                margin-top: 5px;
+                margin-bottom: 5px;
+            """)
+            
+            # Colors and Icons based on content
+            txt = message.strip()
+            # If text is EXACTLY "Cuộc gọi thoại", it means Rejected/Missed (No duration)
+            if txt == "Cuộc gọi thoại":
+                lbl.setText(f"📞 ❌ {txt}")
+                lbl.setStyleSheet(lbl.styleSheet() + "color: #e74c3c; font-style: italic;") # Red
+            
+            # If text starts with "Cuộc gọi thoại" and has newline (Duration info), it means Ended
+            elif txt.startswith("Cuộc gọi thoại\n"):
+                lbl.setText(f"📞 {txt}")
+                lbl.setStyleSheet(lbl.styleSheet() + "color: #2c3e50; font-weight: bold;") # Dark Blue
+            
+            # Fallback (Old logs or other system messages)
+            else:
+                if "từ chối" in txt.lower() or "nhỡ" in txt.lower():
+                     lbl.setText(f"📞 ❌ {txt}")
+                     lbl.setStyleSheet(lbl.styleSheet() + "color: #e74c3c; font-style: italic;")
+                else:
+                     lbl.setStyleSheet(lbl.styleSheet() + "color: #7f8c8d; font-style: italic;")
+
+            bubble_layout.addStretch()
+            bubble_layout.addWidget(lbl)
+            bubble_layout.addStretch()
+            return bubble_widget
+
+        # Normal Message style
         bubble_layout.setSpacing(10)
         avatar = QtWidgets.QLabel()
         avatar.setFixedSize(35, 35)
@@ -858,6 +1027,12 @@ class MainView(QtWidgets.QMainWindow):
         if not self.current_receiver_id: return
         file_path, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Chọn video", "", "Video (*.mp4 *.avi)")
         if file_path:
+            # Check size limit (50MB)
+            file_size = os.path.getsize(file_path)
+            if file_size > 50 * 1024 * 1024:
+                QtWidgets.QMessageBox.warning(self, "File quá lớn", "Video không được vượt quá 50MB để đảm bảo tốc độ.")
+                return
+
             try:
                 with open(file_path, 'rb') as f:
                     data = base64.b64encode(f.read()).decode('utf-8')
@@ -865,6 +1040,128 @@ class MainView(QtWidgets.QMainWindow):
                 self.add_message_to_chat(data, "Bạn", True, is_video=True, avatar_base64=self.self_avatar)
             except Exception as e:
                 print(e)
+                QtWidgets.QMessageBox.critical(self, "Lỗi", f"Không thể gửi video: {e}")
+
+    def start_call(self):
+        if not self.current_receiver_id:
+            QtWidgets.QMessageBox.warning(self, "Lỗi", "Vui lòng chọn người để gọi.")
+            return
+        
+        # 1. Show ActiveCallDialog (Caller State)
+        self.active_call_dialog = ActiveCallDialog(self.current_receiver_name, self.user_avatars.get(self.current_receiver_id), is_caller=True, parent=self)
+        self.active_call_dialog.hangup_signal.connect(lambda: self.end_call_remote(self.current_receiver_id))
+        self.active_call_dialog.show()
+        
+        # 2. Send Call Request
+        self.controller.send_signal(self.current_receiver_id, "call_request", {
+            "caller_name": self.display_name,
+            "caller_avatar": self.self_avatar
+        })
+
+    def send_call_signal(self, signal_type, data=None):
+        if self.current_receiver_id:
+            self.controller.send_signal(self.current_receiver_id, signal_type, data)
+
+    def on_signal_received(self, msg):
+        signal_type = msg.get("signal_type")
+        sender_id = msg.get("sender_id")
+        
+        if signal_type == "call_request":
+            # Show Incoming Call Dialog
+            caller_name = msg.get("caller_name", "Unknown")
+            caller_avatar = msg.get("caller_avatar")
+            
+            self.incoming_dialog = IncomingCallDialog(caller_name, caller_avatar, parent=self)
+            
+            # Connect Signals
+            self.incoming_dialog.accept_signal.connect(lambda: self.accept_call(sender_id, caller_name, caller_avatar))
+            self.incoming_dialog.reject_signal.connect(lambda: self.reject_call(sender_id))
+            
+            self.incoming_dialog.show()
+
+        elif signal_type == "call_accepted":
+            if self.active_call_dialog:
+                self.active_call_dialog.start_timer()
+
+        elif signal_type == "call_rejected":
+            if self.active_call_dialog:
+                self.active_call_dialog.close()
+                self.active_call_dialog = None
+                QtWidgets.QMessageBox.information(self, "Cuộc gọi", "Người gọi đang bận.")
+                
+                # Log missed call locally (Caller side)
+                # Matches the format for Rejected call (Exact string)
+                # msg_content = "Cuộc gọi thoại"
+                # self.add_message_to_chat(msg_content, "Bạn", is_self=True, is_call_log=True, avatar_base64=self.self_avatar)
+                pass
+
+
+        elif signal_type == "call_ended":
+            duration = "00:00"
+            if self.active_call_dialog:
+                duration = self.active_call_dialog.timer_lbl.text()
+                self.active_call_dialog.close()
+                self.active_call_dialog = None
+            
+            if hasattr(self, 'incoming_dialog') and self.incoming_dialog and self.incoming_dialog.isVisible():
+                self.incoming_dialog.close()
+            
+            # Log call ended
+            # Log call ended
+            # "call_ended" is sent by the one who hung up.
+            # The one who hangs up should be the one to save the log to DB?
+            # Or both?
+            # Let's stick to: The "Hangup" action triggers the log save.
+            # The "call_ended" signal just closes the UI.
+            # The log message will arrive via standard message channel.
+            pass
+
+    def accept_call(self, sender_id, name, avatar):
+        # 1. Close Incoming Dialog (handled by class)
+        # 2. Show Active Dialog
+        self.active_call_dialog = ActiveCallDialog(name, avatar, is_caller=False, parent=self)
+        self.active_call_dialog.start_timer()
+        self.active_call_dialog.show()
+        
+        # 3. Send Accepted Signal
+        self.controller.send_signal(sender_id, "call_accepted")
+        
+        # Handle Hangup
+        self.active_call_dialog.hangup_signal.connect(lambda: self.end_call_remote(sender_id))
+
+    def reject_call(self, sender_id):
+        self.controller.send_signal(sender_id, "call_rejected")
+        # Log missed (Rejected) - This saves to DB for both
+        # Using exact string "Cuộc gọi thoại" to denote rejected/missed
+        self.controller.send_call_log(sender_id, "Cuộc gọi thoại")
+        # Add local log for self
+        self.add_message_to_chat("Cuộc gọi thoại", "Bạn", is_self=True, is_call_log=True, avatar_base64=self.self_avatar)
+
+    def end_call_remote(self, target_id):
+        # I am hanging up.
+        duration = self.active_call_dialog.timer_lbl.text()
+        
+        # Calculate start time (Current time - duration) roughly, or just use Current Time as "Call Ended Time"
+        import datetime
+        now = datetime.datetime.now().strftime("%H:%M")
+        
+        # Check if call was actually connected (duration > 00:00)
+        # If 00:00, it means Caller Cancelled or Receiver Rejected before Answer
+        if duration == "00:00":
+             log_msg = "Cuộc gọi thoại" # Triggers Red X logic
+        else:
+             # Msg format: "Cuộc gọi thoại\n[Time] - [Duration]"
+             log_msg = f"Cuộc gọi thoại\n{now} - {duration}"
+        
+        # 1. Notify peer to close UI
+        self.controller.send_signal(target_id, "call_ended")
+        
+        # 2. Save log to DB and User B
+        self.controller.send_call_log(target_id, log_msg)
+        
+        # 3. Show log locally (User A)
+        self.add_message_to_chat(log_msg, "Bạn", is_self=True, is_call_log=True, avatar_base64=self.self_avatar)
+
 
     # === THREAD-SAFE SIGNAL SLOTS ===
     def check_incoming_messages(self):
@@ -887,6 +1184,10 @@ class MainView(QtWidgets.QMainWindow):
                         self.new_group_signal.emit()
                         continue
 
+                    if action == "signal":
+                        self.signal_received.emit(msg)
+                        continue
+
                     sender_id = msg.get('sender_id')
                     group_id = msg.get('group_id')
                     t = 'text'
@@ -897,6 +1198,9 @@ class MainView(QtWidgets.QMainWindow):
                         t = 'voice'; content = msg.get('voice_data')
                     elif msg.get('is_video'):
                         t = 'video'; content = msg.get('video_data')
+                    elif msg.get('is_call_log'):
+                        t = 'call_log'
+                    
                     sender_name = msg.get('sender_name', 'Unknown')
                     sender_avatar = msg.get('sender_avatar')  # Lấy avatar từ message
                     
@@ -1048,6 +1352,7 @@ class MainView(QtWidgets.QMainWindow):
         is_img = (message_type == 'image')
         is_voice = (message_type == 'voice')
         is_video = (message_type == 'video')
+        is_call_log = (message_type == 'call_log')
         
         # Ưu tiên dùng avatar từ message (mới nhất), nếu không có thì dùng cache
         avatar = sender_avatar
@@ -1056,7 +1361,7 @@ class MainView(QtWidgets.QMainWindow):
         elif not avatar and self.current_mode == "user" and target_id in self.user_avatars:
             avatar = self.user_avatars[target_id]
         
-        self.add_message_to_chat(message, sender_name, False, is_img, is_voice, is_video, avatar)
+        self.add_message_to_chat(message, sender_name, False, is_img, is_voice, is_video, is_call_log, avatar)
 
     def refresh_self_profile(self):
         try:
@@ -1126,10 +1431,20 @@ class MainView(QtWidgets.QMainWindow):
             wf.setframerate(44100)
             wf.writeframes(b''.join(self.frames));
             wf.close()
-            voice_b64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+            
+            # Check size limit (10MB)
+            voice_data_bytes = buffer.getvalue()
+            if len(voice_data_bytes) > 10 * 1024 * 1024:
+                 QtWidgets.QMessageBox.warning(self, "Ghi âm quá dài", "File ghi âm quá lớn (>10MB). Vui lòng ghi âm ngắn hơn.")
+                 return
+
+            voice_b64 = base64.b64encode(voice_data_bytes).decode('utf-8')
             if self.current_receiver_id:
-                if self.current_mode == "user": self.controller.send_voice(self.current_receiver_id, voice_b64,
-                                                                           "voice.wav")
+                if self.current_mode == "user": 
+                    self.controller.send_voice(self.current_receiver_id, voice_b64, "voice.wav")
+                else:
+                    self.controller.send_group_message(self.current_receiver_id, "", is_voice=True, voice_data=voice_b64)
+                    
                 self.add_message_to_chat(voice_b64, "Bạn", True, is_voice=True, avatar_base64=self.self_avatar)
 
     def open_profile_dialog(self):

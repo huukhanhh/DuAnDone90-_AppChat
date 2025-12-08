@@ -1,166 +1,113 @@
-2025-12-01 03:58:42,254 - INFO - Database connection established
-2025-12-01 03:58:42,255 - INFO - UserModel initialized successfully
-2025-12-01 03:58:54,545 - INFO - New client session started
-2025-12-01 03:58:54,779 - INFO - User logged in: my@gmail.com
-2025-12-01 03:59:10,299 - INFO - New client session started
-2025-12-01 03:59:10,519 - INFO - User logged in: kiet@gmail.com
-2025-12-01 03:59:51,891 - INFO - New client session started
-2025-12-01 03:59:52,561 - INFO - New client session started
-2025-12-01 04:00:41,656 - INFO - Database connection established
-2025-12-01 04:00:41,657 - INFO - UserModel initialized successfully
-2025-12-01 04:00:51,273 - INFO - New client session started
-2025-12-01 04:00:51,490 - INFO - User logged in: my@gmail.com
-2025-12-01 04:01:08,002 - INFO - New client session started
-2025-12-01 04:01:08,208 - INFO - User logged in: kiet@gmail.com
-2025-12-01 04:05:20,257 - INFO - Database connection established
-2025-12-01 04:05:20,257 - INFO - UserModel initialized successfully
-2025-12-01 04:05:34,664 - INFO - New client session started
-2025-12-01 04:05:34,886 - INFO - User logged in: kiet@gmail.com
-2025-12-01 04:05:44,068 - INFO - New client session started
-2025-12-01 04:05:44,283 - INFO - User logged in: my@gmail.com
-2025-12-01 04:11:18,735 - INFO - Database connection established
-2025-12-01 04:11:18,735 - INFO - UserModel initialized successfully
-2025-12-01 04:11:33,204 - INFO - New client session started
-2025-12-01 04:11:33,409 - INFO - User logged in: my@gmail.com
-2025-12-01 04:12:15,520 - INFO - New client session started
-2025-12-01 04:12:15,743 - INFO - User logged in: kiet@gmail.com
-2025-12-01 04:12:45,306 - ERROR - Error getting chat history: Unread result found
-2025-12-01 04:12:57,444 - ERROR - Error getting chat history: 2027 (HY000): Malformed packet
-2025-12-01 04:12:57,446 - ERROR - Error getting avatar: 2013 (HY000): Lost connection to MySQL server during query
-2025-12-01 04:12:57,446 - ERROR - Error getting display_name: 2013 (HY000): Lost connection to MySQL server during query
-2025-12-01 04:12:57,446 - ERROR - Error getting avatar: 2013 (HY000): Lost connection to MySQL server during query
-2025-12-01 04:12:57,446 - ERROR - Error getting display_name: 2013 (HY000): Lost connection to MySQL server during query
-2025-12-01 04:12:57,446 - ERROR - Error getting avatar: 2013 (HY000): Lost connection to MySQL server during query
-2025-12-01 04:12:57,446 - ERROR - Error getting display_name: 2013 (HY000): Lost connection to MySQL server during query
-2025-12-01 04:12:57,446 - ERROR - Error getting avatar: 2013 (HY000): Lost connection to MySQL server during query
-2025-12-01 04:12:57,446 - ERROR - Error getting display_name: 2013 (HY000): Lost connection to MySQL server during query
-2025-12-01 04:12:57,446 - ERROR - Error getting avatar: 2013 (HY000): Lost connection to MySQL server during query
-2025-12-01 04:12:57,446 - ERROR - Error getting display_name: 2013 (HY000): Lost connection to MySQL server during query
-2025-12-01 04:12:57,446 - ERROR - Error getting avatar: 2013 (HY000): Lost connection to MySQL server during query
-2025-12-01 04:12:57,446 - ERROR - Error getting display_name: 2013 (HY000): Lost connection to MySQL server during query
-2025-12-01 04:12:57,446 - ERROR - Error getting avatar: 2013 (HY000): Lost connection to MySQL server during query
-2025-12-01 04:12:57,539 - ERROR - Error getting chat history: 2013 (HY000): Lost connection to MySQL server during query
-2025-12-01 04:12:57,544 - ERROR - Error getting chat history: 2013 (HY000): Lost connection to MySQL server during query
-2025-12-01 04:12:59,639 - ERROR - Error getting profile: 2013 (HY000): Lost connection to MySQL server during query
-2025-12-01 04:12:59,640 - ERROR - Error getting all users: 2013 (HY000): Lost connection to MySQL server during query
-2025-12-01 04:12:59,741 - ERROR - Error getting chat history: 2013 (HY000): Lost connection to MySQL server during query
-2025-12-01 04:12:59,842 - ERROR - Error getting chat history: 2013 (HY000): Lost connection to MySQL server during query
-2025-12-01 04:13:03,497 - ERROR - Error getting all users: 2013 (HY000): Lost connection to MySQL server during query
-2025-12-01 04:13:11,114 - INFO - New client session started
-2025-12-01 04:13:12,354 - INFO - New client session started
-2025-12-01 04:13:22,715 - INFO - New client session started
-2025-12-01 04:13:22,715 - ERROR - Database error during login: 2013 (HY000): Lost connection to MySQL server during query
-2025-12-01 04:13:22,717 - INFO - New client session started
-2025-12-01 04:13:34,700 - INFO - Database connection established
-2025-12-01 04:13:34,701 - INFO - UserModel initialized successfully
-2025-12-01 04:13:44,336 - INFO - New client session started
-2025-12-01 04:13:44,542 - INFO - User logged in: kiet@gmail.com
-2025-12-01 04:13:58,257 - INFO - New client session started
-2025-12-01 04:13:58,475 - INFO - User logged in: my@gmail.com
-2025-12-06 21:31:50,554 - INFO - Database connection established
-2025-12-06 21:31:50,554 - INFO - UserModel initialized successfully
-2025-12-06 21:32:10,058 - INFO - New client session started
-2025-12-06 21:32:10,738 - INFO - User logged in: my@gmail.com
-2025-12-06 21:32:28,073 - INFO - New client session started
-2025-12-06 21:32:28,841 - INFO - User logged in: bo@gmail.com
-2025-12-06 21:33:06,241 - DEBUG - Message saved: 6 -> 5
-2025-12-06 21:33:41,437 - ERROR - Error getting profile: Unread result found
-2025-12-06 21:33:41,438 - ERROR - Error getting all users: Unread result found
-2025-12-06 21:33:41,439 - ERROR - Error getting all users: Unread result found
-2025-12-06 21:34:02,862 - DEBUG - Message saved: 5 -> 6
-2025-12-06 21:34:23,755 - ERROR - Error getting chat history: Unread result found
-2025-12-06 21:36:48,943 - INFO - New client session started
-2025-12-06 21:36:49,577 - INFO - New client session started
-2025-12-07 12:07:50,291 - INFO - Database connection established
-2025-12-07 12:07:50,292 - INFO - UserModel initialized successfully
-2025-12-07 12:10:59,966 - INFO - Database connection established
-2025-12-07 12:10:59,966 - INFO - UserModel initialized successfully
-2025-12-07 12:11:36,375 - INFO - New client session started
-2025-12-07 12:11:37,054 - INFO - User logged in: my@gmail.com
-2025-12-07 12:15:51,902 - INFO - Database connection established
-2025-12-07 12:15:51,903 - INFO - UserModel initialized successfully
-2025-12-07 12:16:16,434 - INFO - New client session started
-2025-12-07 12:16:17,071 - INFO - User logged in: my@gmail.com
-2025-12-07 12:18:27,422 - DEBUG - Video message saved: 5 -> 7
-2025-12-07 12:19:19,073 - INFO - New client session started
-2025-12-07 13:03:25,815 - INFO - Database connection established
-2025-12-07 13:03:25,815 - INFO - UserModel initialized successfully
-2025-12-07 13:03:42,136 - INFO - New client session started
-2025-12-07 13:03:42,794 - INFO - User logged in: my@gmail.com
-2025-12-07 13:07:59,265 - INFO - New client session started
-2025-12-07 13:09:29,232 - INFO - Database connection established
-2025-12-07 13:09:29,232 - INFO - UserModel initialized successfully
-2025-12-07 13:09:49,280 - INFO - New client session started
-2025-12-07 13:09:49,892 - INFO - User logged in: my@gmail.com
-2025-12-07 13:11:34,709 - INFO - New client session started
-2025-12-07 13:16:07,372 - INFO - Database connection established
-2025-12-07 13:16:07,372 - INFO - UserModel initialized successfully
-2025-12-07 13:16:18,592 - INFO - New client session started
-2025-12-07 13:16:19,222 - INFO - User logged in: my@gmail.com
-2025-12-07 13:17:55,237 - INFO - Database connection established
-2025-12-07 13:17:55,237 - INFO - UserModel initialized successfully
-2025-12-07 13:18:06,537 - INFO - New client session started
-2025-12-07 13:18:07,175 - INFO - User logged in: my@gmail.com
-2025-12-07 13:26:44,445 - INFO - New client session started
-2025-12-07 13:40:40,888 - INFO - Database connection established
-2025-12-07 13:40:40,889 - INFO - UserModel initialized successfully
-2025-12-07 13:40:53,046 - INFO - New client session started
-2025-12-07 13:40:53,707 - INFO - User logged in: my@gmail.com
-2025-12-07 13:42:13,327 - INFO - New client session started
-2025-12-07 14:49:07,119 - INFO - Database connection established
-2025-12-07 14:49:07,119 - INFO - UserModel initialized successfully
-2025-12-07 14:49:19,707 - INFO - New client session started
-2025-12-07 14:49:19,927 - INFO - User logged in: my@gmail.com
-2025-12-07 14:50:06,921 - INFO - New client session started
-2025-12-07 14:55:14,150 - INFO - Database connection established
-2025-12-07 14:55:14,150 - INFO - UserModel initialized successfully
-2025-12-07 14:55:28,102 - INFO - New client session started
-2025-12-07 14:55:28,318 - INFO - User logged in: my@gmail.com
-2025-12-07 15:04:55,208 - INFO - New client session started
-2025-12-07 15:13:58,591 - INFO - Database connection established
-2025-12-07 15:13:58,591 - INFO - UserModel initialized successfully
-2025-12-07 15:14:17,341 - INFO - New client session started
-2025-12-07 15:14:17,544 - INFO - User logged in: my@gmail.com
-2025-12-07 15:23:47,961 - INFO - Database connection established
-2025-12-07 15:23:47,961 - INFO - UserModel initialized successfully
-2025-12-07 15:23:57,485 - INFO - New client session started
-2025-12-07 15:23:57,695 - INFO - User logged in: my@gmail.com
-2025-12-07 15:29:38,156 - INFO - New client session started
-2025-12-07 15:40:37,139 - INFO - Database connection established
-2025-12-07 15:40:37,140 - INFO - UserModel initialized successfully
-2025-12-07 15:40:47,114 - INFO - New client session started
-2025-12-07 15:40:47,353 - INFO - User logged in: my@gmail.com
-2025-12-07 15:41:28,647 - INFO - New client session started
-2025-12-07 15:43:32,125 - INFO - Database connection established
-2025-12-07 15:43:32,126 - INFO - UserModel initialized successfully
-2025-12-07 15:43:41,012 - INFO - New client session started
-2025-12-07 15:43:41,217 - INFO - User logged in: my@gmail.com
-2025-12-07 15:47:55,447 - INFO - Database connection established
-2025-12-07 15:47:55,447 - INFO - UserModel initialized successfully
-2025-12-07 15:48:17,506 - INFO - New client session started
-2025-12-07 15:48:17,736 - INFO - User logged in: my@gmail.com
-2025-12-07 15:57:37,716 - INFO - Database connection established
-2025-12-07 15:57:37,716 - INFO - UserModel initialized successfully
-2025-12-07 15:57:46,524 - INFO - New client session started
-2025-12-07 15:57:46,731 - INFO - User logged in: my@gmail.com
-2025-12-07 15:57:57,638 - DEBUG - Message saved: 5 -> 2
-2025-12-07 16:05:49,907 - INFO - Database connection established
-2025-12-07 16:05:49,907 - INFO - UserModel initialized successfully
-2025-12-07 16:08:22,308 - INFO - Database connection established
-2025-12-07 16:08:22,308 - INFO - UserModel initialized successfully
-2025-12-07 16:08:31,736 - INFO - New client session started
-2025-12-07 16:08:31,961 - INFO - User logged in: my@gmail.com
-2025-12-07 16:17:05,535 - INFO - Database connection established
-2025-12-07 16:17:05,535 - INFO - UserModel initialized successfully
-2025-12-07 16:18:20,620 - INFO - New client session started
-2025-12-07 16:18:20,829 - INFO - User logged in: my@gmail.com
-2025-12-07 16:33:45,967 - INFO - Database connection established
-2025-12-07 16:33:45,967 - INFO - UserModel initialized successfully
-2025-12-07 16:33:54,919 - INFO - New client session started
-2025-12-07 16:33:55,136 - INFO - User logged in: my@gmail.com
-2025-12-07 16:34:52,220 - INFO - New client session started
-2025-12-07 18:10:02,573 - INFO - Database connection established
-2025-12-07 18:10:02,574 - INFO - UserModel initialized successfully
-2025-12-07 18:10:14,828 - INFO - New client session started
-2025-12-07 18:10:15,061 - INFO - User logged in: my@gmail.com
-2025-12-07 18:12:32,345 - INFO - New client session started
+2025-12-08 00:43:36,071 - INFO - Database connection established
+2025-12-08 00:43:36,071 - INFO - UserModel initialized successfully
+2025-12-08 00:43:46,374 - INFO - New client session started
+2025-12-08 00:43:46,579 - INFO - User logged in: my@gmail.com
+2025-12-08 00:44:57,536 - INFO - New client session started
+2025-12-08 00:44:57,755 - INFO - User logged in: bo@gmail.com
+2025-12-08 00:46:56,003 - DEBUG - Message saved: 5 -> 6 (CallLog: True)
+2025-12-08 00:47:01,771 - DEBUG - Message saved: 6 -> 5 (CallLog: True)
+2025-12-08 00:55:37,217 - INFO - New client session started
+2025-12-08 00:55:37,970 - INFO - New client session started
+2025-12-08 00:57:00,925 - INFO - Database connection established
+2025-12-08 00:57:00,925 - INFO - UserModel initialized successfully
+2025-12-08 00:57:10,016 - INFO - New client session started
+2025-12-08 00:57:10,223 - INFO - User logged in: my@gmail.com
+2025-12-08 00:57:22,833 - INFO - New client session started
+2025-12-08 00:57:23,052 - INFO - User logged in: huuhoan@gmail.com
+2025-12-08 00:57:38,469 - DEBUG - Message saved: 7 -> 5 (CallLog: True)
+2025-12-08 00:57:56,004 - DEBUG - Message saved: 7 -> 5 (CallLog: True)
+2025-12-08 00:59:08,337 - INFO - New client session started
+2025-12-08 00:59:09,441 - INFO - New client session started
+2025-12-08 01:07:06,744 - INFO - Database connection established
+2025-12-08 01:07:06,745 - INFO - UserModel initialized successfully
+2025-12-08 01:07:19,255 - INFO - New client session started
+2025-12-08 01:07:19,481 - INFO - User logged in: bo@gmail.com
+2025-12-08 01:07:30,470 - INFO - New client session started
+2025-12-08 01:07:30,674 - INFO - User logged in: my@gmail.com
+2025-12-08 01:10:53,446 - DEBUG - Message saved: 6 -> 5 (CallLog: True)
+2025-12-08 01:14:38,999 - DEBUG - Message saved: 6 -> 5 (CallLog: True)
+2025-12-08 01:17:56,917 - DEBUG - Message saved: 6 -> 5 (CallLog: True)
+2025-12-08 01:18:14,604 - INFO - New client session started
+2025-12-08 01:18:15,260 - INFO - New client session started
+2025-12-08 01:21:52,699 - INFO - Database connection established
+2025-12-08 01:21:52,699 - INFO - UserModel initialized successfully
+2025-12-08 01:22:00,590 - INFO - New client session started
+2025-12-08 01:22:00,798 - INFO - User logged in: bo@gmail.com
+2025-12-08 01:22:16,371 - INFO - New client session started
+2025-12-08 01:22:16,581 - INFO - User logged in: my@gmail.com
+2025-12-08 01:22:27,304 - INFO - New client session started
+2025-12-08 01:22:27,513 - INFO - User logged in: huuhoan@gmail.com
+2025-12-08 01:22:57,284 - DEBUG - Message saved: 7 -> 5 (CallLog: True)
+2025-12-08 01:23:47,309 - DEBUG - Message saved: 7 -> 5 (CallLog: True)
+2025-12-08 01:23:53,769 - INFO - New client session started
+2025-12-08 01:23:54,400 - INFO - New client session started
+2025-12-08 01:38:16,262 - INFO - Database connection established
+2025-12-08 01:38:16,262 - INFO - UserModel initialized successfully
+2025-12-08 01:38:27,031 - INFO - New client session started
+2025-12-08 01:38:27,272 - INFO - User logged in: bo@gmail.com
+2025-12-08 01:38:40,506 - INFO - New client session started
+2025-12-08 01:38:40,718 - INFO - User logged in: my@gmail.com
+2025-12-08 01:39:04,973 - DEBUG - Message saved: 5 -> 6 (CallLog: True)
+2025-12-08 01:39:23,829 - DEBUG - Message saved: 6 -> 5 (CallLog: True)
+2025-12-08 01:39:43,141 - DEBUG - Message saved: 5 -> 6 (CallLog: True)
+2025-12-08 01:39:51,229 - DEBUG - Message saved: 6 -> 5 (CallLog: True)
+2025-12-08 01:41:54,993 - INFO - New client session started
+2025-12-08 01:41:55,778 - INFO - New client session started
+2025-12-08 01:48:11,856 - INFO - Database connection established
+2025-12-08 01:48:11,856 - INFO - UserModel initialized successfully
+2025-12-08 01:48:22,764 - INFO - New client session started
+2025-12-08 01:48:22,976 - INFO - User logged in: huuhoan@gmail.com
+2025-12-08 01:48:36,844 - INFO - New client session started
+2025-12-08 01:48:37,051 - INFO - User logged in: my@gmail.com
+2025-12-08 01:49:16,814 - DEBUG - Message saved: 5 -> 7 (CallLog: True)
+2025-12-08 01:49:25,774 - DEBUG - Message saved: 7 -> 5 (CallLog: True)
+2025-12-08 01:49:56,838 - DEBUG - Message saved: 5 -> 7 (CallLog: True)
+2025-12-08 01:50:07,286 - DEBUG - Message saved: 7 -> 5 (CallLog: True)
+2025-12-08 01:50:19,498 - INFO - New client session started
+2025-12-08 01:50:25,089 - INFO - New client session started
+2025-12-08 01:57:44,050 - INFO - Database connection established
+2025-12-08 01:57:44,051 - INFO - UserModel initialized successfully
+2025-12-08 01:57:54,067 - INFO - New client session started
+2025-12-08 01:57:54,284 - INFO - User logged in: my@gmail.com
+2025-12-08 01:58:03,429 - INFO - New client session started
+2025-12-08 01:58:03,646 - INFO - User logged in: bo@gmail.com
+2025-12-08 01:58:16,790 - DEBUG - Message saved: 5 -> 6 (CallLog: True)
+2025-12-08 01:58:23,591 - DEBUG - Message saved: 6 -> 5 (CallLog: True)
+2025-12-08 01:58:35,630 - DEBUG - Message saved: 5 -> 6 (CallLog: True)
+2025-12-08 01:58:43,350 - DEBUG - Message saved: 6 -> 5 (CallLog: True)
+2025-12-08 01:58:50,991 - DEBUG - Message saved: 5 -> 6 (CallLog: False)
+2025-12-08 01:59:02,573 - DEBUG - Message saved: 6 -> 5 (CallLog: False)
+2025-12-08 01:59:22,579 - INFO - New client session started
+2025-12-08 01:59:23,219 - INFO - New client session started
+2025-12-08 02:01:15,870 - INFO - Database connection established
+2025-12-08 02:01:15,870 - INFO - UserModel initialized successfully
+2025-12-08 02:01:23,715 - INFO - New client session started
+2025-12-08 02:01:23,921 - INFO - User logged in: my@gmail.com
+2025-12-08 02:03:23,579 - INFO - New client session started
+2025-12-08 02:03:33,051 - INFO - Database connection established
+2025-12-08 02:03:33,051 - INFO - UserModel initialized successfully
+2025-12-08 02:03:41,510 - INFO - New client session started
+2025-12-08 02:03:41,715 - INFO - User logged in: my@gmail.com
+2025-12-08 02:04:04,434 - INFO - New client session started
+2025-12-08 02:06:31,635 - INFO - Database connection established
+2025-12-08 02:06:31,635 - INFO - UserModel initialized successfully
+2025-12-08 02:06:39,914 - INFO - New client session started
+2025-12-08 02:06:40,119 - INFO - User logged in: my@gmail.com
+2025-12-08 02:07:06,295 - INFO - New client session started
+2025-12-08 02:07:11,772 - INFO - New client session started
+2025-12-08 02:07:11,972 - INFO - User logged in: my@gmail.com
+2025-12-08 12:36:41,467 - INFO - Database connection established
+2025-12-08 12:36:41,467 - INFO - UserModel initialized successfully
+2025-12-08 12:36:52,256 - INFO - New client session started
+2025-12-08 12:36:52,474 - INFO - User logged in: my@gmail.com
+2025-12-08 12:39:18,343 - INFO - New client session started
+2025-12-08 12:54:08,808 - INFO - Database connection established
+2025-12-08 12:54:08,808 - INFO - UserModel initialized successfully
+2025-12-08 12:54:27,654 - INFO - New client session started
+2025-12-08 12:54:27,879 - INFO - User logged in: my@gmail.com
+2025-12-08 12:54:44,098 - INFO - New client session started
+2025-12-08 12:54:44,307 - INFO - User logged in: bo@gmail.com
+2025-12-08 12:55:15,607 - DEBUG - Message saved: 5 -> 6 (CallLog: False)
+2025-12-08 12:55:33,722 - DEBUG - Message saved: 6 -> 5 (CallLog: True)
+2025-12-08 12:55:42,331 - INFO - New client session started
+2025-12-08 12:55:42,939 - INFO - New client session started
