@@ -302,13 +302,60 @@ class UserModel:
             self.cursor.executemany("INSERT INTO group_members (group_id, user_id) VALUES (%s, %s)", values)
 
             # Tin nhắn hệ thống báo tạo nhóm
-            self.save_group_message(group_id, None, f"Nhóm '{name}' đã được tạo", is_system=True)
+            creator_name = self.get_display_name(owner_id)
+            self.save_group_message(group_id, None, f"Nhóm '{name}' đã được tạo bởi {creator_name}", is_system=True)
 
             self.connection.commit()
             return {"status": "success", "group_id": group_id, "members": list(all_members)}
         except Exception as e:
             self.connection.rollback()
             return {"status": "error", "message": str(e)}
+
+    def add_group_member(self, group_id, user_id, added_by_name):
+        try:
+            # Kiểm tra tồn tại
+            self.cursor.execute("SELECT 1 FROM group_members WHERE group_id=%s AND user_id=%s", (group_id, user_id))
+            if self.cursor.fetchone():
+                return {"status": "error", "message": "Thành viên đã tồn tại"}
+            
+            self.cursor.execute("INSERT INTO group_members (group_id, user_id) VALUES (%s, %s)", (group_id, user_id))
+            
+            # Tin nhắn hệ thống
+            user_name = self.get_display_name(user_id)
+            self.save_group_message(group_id, None, f"{added_by_name} đã thêm {user_name} vào nhóm", is_system=True)
+            self.connection.commit()
+            return {"status": "success"}
+        except Exception as e:
+             return {"status": "error", "message": str(e)}
+
+    def remove_group_member(self, group_id, user_id, user_name):
+        try:
+            self.cursor.execute("DELETE FROM group_members WHERE group_id=%s AND user_id=%s", (group_id, user_id))
+            
+            # Tin nhắn hệ thống
+            self.save_group_message(group_id, None, f"{user_name} đã rời nhóm", is_system=True)
+            
+            # Kiểm tra số lượng còn lại
+            self.cursor.execute("SELECT COUNT(*) FROM group_members WHERE group_id=%s", (group_id,))
+            count = self.cursor.fetchone()[0]
+            
+            if count == 0:
+                self.delete_group(group_id)
+                return {"status": "success", "remaining_members": 0}
+            
+            self.connection.commit()
+            return {"status": "success", "remaining_members": count}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    def delete_group(self, group_id):
+        try:
+            self.cursor.execute("DELETE FROM group_messages WHERE group_id=%s", (group_id,))
+            self.cursor.execute("DELETE FROM group_members WHERE group_id=%s", (group_id,))
+            self.cursor.execute("DELETE FROM `groups` WHERE id=%s", (group_id,))
+            self.connection.commit()
+        except Exception as e:
+            print(f"Error delete group: {e}")
 
     def get_user_groups(self, user_id):
         try:

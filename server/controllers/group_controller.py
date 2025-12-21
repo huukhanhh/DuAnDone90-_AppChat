@@ -19,3 +19,23 @@ class GroupController:
 
     def get_history(self, group_id):
         return {"status": "success", "history": self.model.get_group_chat_history(group_id)}
+
+    def add_member(self, group_id, owner_id, user_ids, added_by_name):
+        # Allow adding multiple or single? Request says "add user" -> assume list for future proof or single?
+        # Model takes single. Let's iterate if list or just handle single.
+        # Flow: Owner/Member adds New User? Typically anyone in group can add.
+        # Let's assume passed user_ids is a list.
+        
+        results = []
+        for uid in user_ids:
+            res = self.model.add_group_member(group_id, uid, added_by_name)
+            if res["status"] == "success":
+                results.append(uid)
+        
+        return {"status": "success", "added_members": results}
+
+    def leave_group(self, group_id, user_id, user_name):
+        return self.model.remove_group_member(group_id, user_id, user_name)
+
+    def get_members(self, group_id):
+        return {"status": "success", "members": self.model.get_group_members(group_id)}

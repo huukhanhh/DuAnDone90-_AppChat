@@ -16,9 +16,9 @@ class AIChatView(QtWidgets.QWidget):
             QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0px; }
         """)
 
-        # Initialize Gemini
+        # Khởi tạo Gemini
         self.chat_session = None
-        # Default model
+        # Model mặc định
         self.current_model_name = "gemini-2.5-flash"
         
         self.setup_ui()
@@ -41,20 +41,20 @@ class AIChatView(QtWidgets.QWidget):
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         
-        # Header
+        # Tiêu đề (Header)
         header = QtWidgets.QWidget()
         header.setStyleSheet("background-color: white; border-bottom: 1px solid #eee;")
         header.setFixedHeight(70)
         h_layout = QtWidgets.QHBoxLayout(header)
         h_layout.setContentsMargins(20, 0, 20, 0)
         
-        # Title with Icon
+        # Tiêu đề kèm Icon
         title_container = QtWidgets.QWidget()
         title_layout = QtWidgets.QHBoxLayout(title_container)
         title_layout.setContentsMargins(0,0,0,0)
         title_layout.setSpacing(10)
         
-        # Simplistic AI Icon representation (Label)
+        # Biểu tượng AI đơn giản (Label)
         icon_label = QtWidgets.QLabel("✨")
         icon_label.setStyleSheet("font-size: 24px;")
         
@@ -67,7 +67,7 @@ class AIChatView(QtWidgets.QWidget):
 
         h_layout.addStretch()
 
-        # Model Selector
+        # Chọn Model (Model Selector)
         self.model_selector = QtWidgets.QComboBox()
         self.model_selector.addItems(["gemini-2.5-flash", "gemini-2.0-flash"])
         self.model_selector.setCurrentText(self.current_model_name)
@@ -106,13 +106,13 @@ class AIChatView(QtWidgets.QWidget):
         
         layout.addWidget(header)
 
-        # Chat Area
+        # Khu vực Chat
         self.chat_display = QtWidgets.QTextEdit()
         self.chat_display.setReadOnly(True)
         self.chat_display.setStyleSheet("""
             QTextEdit { border: none; background: #ffffff; padding: 20px; font-size: 15px; line-height: 1.5; color: #3c4043; outline: none; }
         """)
-        # Initial greeting with cleaner look
+        # Lời chào ban đầu với giao diện sạch sẽ
         self.chat_display.setHtml(f"""
             <div style='text-align: center; margin-top: 40px;'>
                 <h2 style='color: #202124; font-weight: 500;'>Xin chào!</h2>
@@ -121,7 +121,7 @@ class AIChatView(QtWidgets.QWidget):
         """)
         layout.addWidget(self.chat_display)
 
-        # Typing Indicator (Inserted before input)
+        # Chỉ báo đang nhập (Chèn trước ô nhập liệu)
         self.typing_container = QtWidgets.QWidget()
         self.typing_container.hide()
         typing_layout = QtWidgets.QHBoxLayout(self.typing_container)
@@ -139,17 +139,17 @@ class AIChatView(QtWidgets.QWidget):
             }
         """)
         typing_layout.addWidget(self.typing_label)
-        typing_layout.addStretch() # Push to left
+        typing_layout.addStretch() # Đẩy sang trái
         
         layout.addWidget(self.typing_container)
 
-        # Input Area Wrapper
+        # Bao quanh khu vực nhập liệu (Input Area Wrapper)
         input_container = QtWidgets.QWidget()
-        input_container.setStyleSheet("background-color: white; border-top: 1px solid white;") # No distinct border, floating feel
+        input_container.setStyleSheet("background-color: white; border-top: 1px solid white;") # Không viền rõ, cảm giác nổi
         input_layout = QtWidgets.QHBoxLayout(input_container)
         input_layout.setContentsMargins(20, 10, 20, 20)
         
-        # Inner Frame for nicer input look
+        # Khung bên trong để giao diện nhập liệu đẹp hơn
         input_frame = QtWidgets.QFrame()
         input_frame.setStyleSheet("""
             QFrame { 
@@ -191,7 +191,7 @@ class AIChatView(QtWidgets.QWidget):
         input_layout.addWidget(input_frame)
         layout.addWidget(input_container)
         
-        # Typing Timer
+        # Bộ đếm thời gian gõ (Typing Timer)
         self.typing_timer = QtCore.QTimer()
         self.typing_timer.setInterval(500)
         self.typing_timer.timeout.connect(self.animate_typing)
@@ -199,15 +199,15 @@ class AIChatView(QtWidgets.QWidget):
 
     def animate_typing(self):
         self.typing_dots = (self.typing_dots + 1) % 4
-        # self.typing_label.setText("•" * (self.typing_dots if self.typing_dots > 0 else 1)) # Simple dots
-        # Animated opacity or just length? 
-        # User asked for "horizontal 3 dots moving".
-        # Let's do: . .. ...
+        # self.typing_label.setText("•" * (self.typing_dots if self.typing_dots > 0 else 1)) # Dấu chấm đơn giản
+        # Độ mờ hoạt hình hoặc chỉ độ dài? 
+        # Người dùng yêu cầu "3 dấu chấm ngang di chuyển".
+        # Hãy làm: . .. ...
         dots = "." * self.typing_dots
-        if self.typing_dots == 0: dots = "..." # Keep it visible 
+        if self.typing_dots == 0: dots = "..." # Giữ hiển thị 
         
-        # Better animation: 3 fixed dots, cycling colors? Or just text.
-        # Let's stick to the text cycle for simplicity and clarity.
+        # Hoạt hình tốt hơn: 3 dấu chấm cố định, lặp màu? Hoặc chỉ text.
+        # Hãy giữ chu kỳ text cho đơn giản và rõ ràng.
         # "•" "••" "•••"
         text = "•" * ((self.typing_dots % 3) + 1) 
         self.typing_label.setText(text)
@@ -215,7 +215,7 @@ class AIChatView(QtWidgets.QWidget):
     def show_typing(self):
         self.typing_container.show()
         self.typing_timer.start()
-        # Scroll to bottom to see typing
+        # Cuộn xuống đáy để xem đang gõ
         sb = self.chat_display.verticalScrollBar()
         sb.setValue(sb.maximum())
 
@@ -241,9 +241,9 @@ class AIChatView(QtWidgets.QWidget):
         self.append_message(text, is_user=True)
         self.chat_display.moveCursor(QtGui.QTextCursor.MoveOperation.End)
 
-        self.show_typing() # Show typing indicator
+        self.show_typing() # Hiện chỉ báo đang nhập
 
-        # Run in thread to prevent freezing UI
+        # Chạy trong luồng để tránh đóng băng UI
         import threading
         t = threading.Thread(target=self._generate_response, args=(text,))
         t.start()
@@ -256,7 +256,7 @@ class AIChatView(QtWidgets.QWidget):
         except Exception as e:
              error_msg = str(e)
              if "429" in error_msg:
-                 # Extract retry time
+                 # Trích xuất thời gian thử lại
                  import re
                  match = re.search(r"retry in (\d+(\.\d+)?)s", error_msg)
                  if match:
@@ -280,7 +280,7 @@ class AIChatView(QtWidgets.QWidget):
     @QtCore.Slot(str, bool)
     @QtCore.Slot(str)
     def display_ai_response(self, text, is_html_error=False):
-        self.hide_typing() # Stop animation
+        self.hide_typing() # Dừng hoạt hình
         if is_html_error:
             self.chat_display.insertHtml(text)
             self.chat_display.insertHtml("<br>")
@@ -289,27 +289,27 @@ class AIChatView(QtWidgets.QWidget):
         self.chat_display.moveCursor(QtGui.QTextCursor.MoveOperation.End)
 
     def append_message(self, text, is_user):
-        # Format HTML for chat bubble
+        # Định dạng HTML cho bong bóng chat
         align = "right" if is_user else "left"
         
-        # Colors: Gemini User = Blueish Gradient (simulated with solid for HTML), AI = Light Gray/White
+        # Màu sắc: Gemini User = Gradient hơi xanh (giả lập bằng màu đơn cho HTML), AI = Xám nhạt/Trắng
         if is_user:
-            bg_color = "#e8f0fe" # Light blue like Gemini user
+            bg_color = "#e8f0fe" # Xanh nhạt giống user Gemini
             text_color = "#202124"
-            border_radius = "20px 20px 5px 20px" # Rounded with one sharp corner
+            border_radius = "20px 20px 5px 20px" # Bo tròn với 1 góc nhọn
         else:
             bg_color = "#ffffff"
             text_color = "#202124"
             border_radius = "20px 20px 20px 5px"
             
-        # Convert markdown to html for AI response
+        # Chuyển đổi markdown sang html cho phản hồi AI
         if not is_user:
             try:
                 text = markdown.markdown(text)
             except: 
                 pass 
         
-        # AI Icon for bot
+        # Icon AI cho bot
         avatar = ""
         if not is_user:
             avatar = "<div style='font-size: 20px; margin-right: 10px;'>✨</div>"

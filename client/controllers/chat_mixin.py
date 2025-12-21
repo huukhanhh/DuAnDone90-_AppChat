@@ -26,10 +26,8 @@ class ChatMixin:
         })
 
     def send_typing_status(self, receiver_id, is_typing):
-        # Fire and forget, no need to wait for response usually, but recv loop handles it.
-        return self.send_request({
-            "action": "typing", "receiver_id": receiver_id, "is_typing": is_typing
-        })
+        # Sử dụng cơ chế tín hiệu chung
+        return self.send_signal(receiver_id, "typing", {"is_typing": is_typing})
 
     def send_signal(self, target_id, signal_type, data=None):
         payload = {"action": "signal", "target_id": target_id, "signal_type": signal_type}
@@ -55,3 +53,12 @@ class ChatMixin:
 
     def get_group_chat_history(self, group_id):
         return self.send_request({"action": "get_group_history", "group_id": group_id}).get("history", [])
+
+    def add_group_member(self, group_id, user_ids):
+        return self.send_request({"action": "add_group_member", "group_id": group_id, "user_ids": user_ids})
+
+    def leave_group(self, group_id):
+        return self.send_request({"action": "leave_group", "group_id": group_id})
+
+    def get_group_members(self, group_id):
+        return self.send_request({"action": "get_group_members", "group_id": group_id}).get("members", [])

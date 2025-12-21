@@ -5,7 +5,7 @@ import threading
 import logging
 from config.config import SERVER_CONFIG
 
-# Import Sub-Controllers
+# Import Các Sub-Controller
 from server.models.user_model import UserModel
 from server.controllers.auth_controller import AuthController
 from server.controllers.user_controller import UserController
@@ -24,7 +24,7 @@ class ServerController:
     def __init__(self):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.server_socket.bind((SERVER_CONFIG["host"], SERVER_CONFIG["port"]))
+        self.server_socket.bind(("0.0.0.0", SERVER_CONFIG["port"]))
         self.server_socket.listen(5)
         
         self.clients = {}      # socket -> user_id
@@ -36,7 +36,7 @@ class ServerController:
             self.model = UserModel()
             logger.info("UserModel initialized successfully")
             
-            # Initialize Sub-Controllers
+            # Khởi tạo các Sub-Controller
             self.auth_ctrl = AuthController(self.model)
             self.user_ctrl = UserController(self.model)
             self.chat_ctrl = ChatController(self.model)
@@ -75,7 +75,7 @@ class ServerController:
 
     def handle_client(self, client_socket):
         client_socket.settimeout(600)
-        logger.info("New client session started")
+        logger.info("Phiên client mới bắt đầu")
 
         try:
             while True:
@@ -96,7 +96,7 @@ class ServerController:
                     
                     response = {"status": "error", "message": "Invalid Action"}
 
-                    # === DISPATCHER ===
+                    # === BỘ ĐIỀU PHỐI (DISPATCHER) ===
                     
                     # 1. AUTH
                     if action == "login":
@@ -107,7 +107,7 @@ class ServerController:
                                 self.clients[client_socket] = user_id
                                 self.user_sockets[user_id] = client_socket
                             
-                            # Send offline messages
+                            # Gửi tin nhắn offline
                             if user_id in self.offline_messages:
                                 for msg in self.offline_messages[user_id]:
                                     self.send_to_client(client_socket, msg)
@@ -137,7 +137,7 @@ class ServerController:
                         if uid:
                             response = self.user_ctrl.update_profile(uid, request.get("display_name"), request.get("avatar"), request.get("old_password"), request.get("new_password"))
                             if response["status"] == "success":
-                                # Broadcast Update
+                                # Phát tán cập nhật (Broadcast Update)
                                 new_profile = self.user_ctrl.get_profile(uid)
                                 noti_data = {
                                     "action": "profile_update_notification",
@@ -160,7 +160,7 @@ class ServerController:
                             res_data = self.chat_ctrl.handle_message(sender_id, request)
                             
                             if res_data:
-                                # Prepare Packet
+                                # Chuẩn bị gói tin (Packet)
                                 receiver_id = request.get("receiver_id")
                                 msg_data = {
                                     "action": "message",
@@ -193,7 +193,7 @@ class ServerController:
                         if owner_id:
                             response = self.group_ctrl.create_group(request.get("name"), owner_id, request.get("members"))
                             if response["status"] == "success":
-                                # Notify Members
+                                # Thông báo cho các thành viên
                                 noti = {
                                     "action": "new_group",
                                     "group_id": response["group_id"],
@@ -235,6 +235,105 @@ class ServerController:
 
                     elif action == "get_group_history":
                         response = self.group_ctrl.get_history(request.get("group_id"))
+
+                    elif action == "add_group_member":
+                        sender_id = self.clients.get(client_socket)
+                        if sender_id:
+                            adder_name = self.model.get_display_name(sender_id)
+                            res = self.group_ctrl.add_member(request.get("group_id"), sender_id, request.get("user_ids"), adder_name)
+                            if res["status"] == "success":
+                                # Thông báo cho thành viên MỚI
+                                for new_uid in res["added_members"]:
+                                    if new_uid in self.user_sockets:
+                                        self.send_to_client(self.user_sockets[new_uid], {"action": "new_group"}) # Trigger reload groups
+                                
+                                # Thông báo cho TẤT CẢ thành viên (tin nhắn hệ thống)
+                                gid = request.get("group_id")
+                                members = self.model.get_group_members(gid)
+                                msg_data = {
+                                    "action": "group_message",
+                                    "group_id": gid,
+                                    "sender_id": None, # System
+                                    "sender_name": "System", 
+                                    "message": f"{adder_name} đã thêm thành viên mới", # Simplified, real msg in history
+                                    "is_system": True
+                                }
+                                # Retrieve real last system msg? No, just signal to reload or show ephemeral?
+                                # Ideally, we should broadcast the actual system message content that was saved.
+                                # But let's just trigger "group_message" which client will handle.
+                                # Wait, client handles "group_message" by appending.
+                                # We need to send the exact text used in DB.
+                                # In `add_member`, model saved specific text.
+                                # For simplicity, client can just reload history OR we send a generic notification.
+                                # Hãy gửi một gói tin nhắn hệ thống cụ thể.
+                                
+                                # Better approach: Trigger reload or send synthesized msg.
+                                # Let's fetch the latest msg from history? overhead.
+                                # We can just construct it here: 
+                                # "A added B". Code below constructs it for real-time display.
+                                
+                                # User Model already saved: "{added_by_name} đã thêm {user_name} vào nhóm"
+                                # We can iterate added_members and send one msg per user.
+                                for new_uid in res["added_members"]:
+                                    u_name = self.model.get_display_name(new_uid)
+                                    sys_msg = f"{adder_name} đã thêm {u_name} vào nhóm"
+                                    
+                                    pkt = {
+                                        "action": "group_message",
+                                        "group_id": gid,
+                                        "sender_id": None,
+                                        "sender_name": "System",
+                                        "message": sys_msg,
+                                        "is_system": True
+                                    }
+                                    with self.lock:
+                                        for m in members:
+                                            if m in self.user_sockets:
+                                                self.send_to_client(self.user_sockets[m], pkt)
+
+                                response = {"status": "success"}
+
+                    elif action == "leave_group":
+                        sender_id = self.clients.get(client_socket)
+                        if sender_id:
+                            u_name = self.model.get_display_name(sender_id)
+                            gid = request.get("group_id")
+                            
+                            # Lấy danh sách thành viên TRƯỚC KHI xóa (để thông báo cho họ)
+                            # Actually we need members AFTER removing (to notify remaining)
+                            # But if we remove first, we can't query group members easily if table deleted? 
+                            # Wait, `remove_group_member` returns remaining count.
+                            # If count > 0, we can still query members.
+                            
+                            old_members = self.model.get_group_members(gid)
+                            
+                            res = self.group_ctrl.leave_group(gid, sender_id, u_name)
+                            
+                            if res["status"] == "success":
+                                # Thông báo cho các thành viên còn lại
+                                if res.get("remaining_members", 0) > 0:
+                                    # Lấy danh sách thành viên hiện tại
+                                    current_members = self.model.get_group_members(gid)
+                                    sys_msg = f"{u_name} đã rời nhóm"
+                                    
+                                    pkt = {
+                                        "action": "group_message",
+                                        "group_id": gid,
+                                        "sender_id": None,
+                                        "sender_name": "System",
+                                        "message": sys_msg,
+                                        "is_system": True
+                                    }
+                                    
+                                    with self.lock:
+                                        for m in current_members:
+                                            if m in self.user_sockets:
+                                                self.send_to_client(self.user_sockets[m], pkt)
+                                
+                                response = {"status": "success"}
+
+                    elif action == "get_group_members":
+                         response = self.group_ctrl.get_members(request.get("group_id"))
 
                     # 5. SIGNAL RELAY
                     elif action == "signal":

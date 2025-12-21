@@ -194,7 +194,7 @@ class VideoMessageWidget(QtWidgets.QWidget):
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         
-        # Video Container
+        # Khung Video (Video Container)
         container = QtWidgets.QWidget()
         container.setFixedSize(300, 200)
         container.setStyleSheet("background: black; border-radius: 10px;")
@@ -210,7 +210,7 @@ class VideoMessageWidget(QtWidgets.QWidget):
             
         layout.addWidget(container)
 
-        # Controls Area
+        # Khu vực điều khiển (Controls Area)
         controls = QtWidgets.QWidget()
         controls.setFixedWidth(300)
         c_layout = QtWidgets.QHBoxLayout(controls)
@@ -263,7 +263,7 @@ class VideoMessageWidget(QtWidgets.QWidget):
 
     def handle_media_status(self, status):
         if status == QtMultimedia.QMediaPlayer.MediaStatus.LoadedMedia and not self.thumbnail_shown:
-            # Trick to show first frame
+            # Mẹo để hiển thị khung hình đầu tiên
             self.media_player.play()
             QtCore.QTimer.singleShot(150, self.media_player.pause)
             self.thumbnail_shown = True
@@ -271,7 +271,7 @@ class VideoMessageWidget(QtWidgets.QWidget):
     def handle_error(self):
         err_msg = self.media_player.errorString()
         print(f"Video Error: {err_msg}")
-        # Could show a label, but for now just print to console to debug corruption
+        # Có thể hiện label lỗi, nhưng hiện tại in ra console để debug lỗi dữ liệu
 
     def toggle(self):
         if self.playback_state == QtMultimedia.QMediaPlayer.PlaybackState.PlayingState:
@@ -322,10 +322,10 @@ class VideoMessageWidget(QtWidgets.QWidget):
 # ====================================================================
 class MainView(QtWidgets.QMainWindow):
     # Khai báo các tín hiệu để giao tiếp giữa luồng mạng và luồng giao diện
-    message_received = QtCore.Signal(str, str, str, int, int, str)  # content, sender_name, message_type, target_id, sender_id, sender_avatar
+    message_received = QtCore.Signal(str, str, str, int, int, str, bool)  # content, sender_name, message_type, target_id, sender_id, sender_avatar, is_system
     profile_updated_signal = QtCore.Signal(int, str)  # uid, name (không gửi avatar qua signal)
     new_group_signal = QtCore.Signal()
-    signal_received = QtCore.Signal(dict) # New signal for P2P events
+    signal_received = QtCore.Signal(dict) # Tín hiệu mới cho các sự kiện P2P
 
     def __init__(self, app, controller, user_id, display_name):
         super().__init__()
@@ -340,7 +340,7 @@ class MainView(QtWidgets.QMainWindow):
         self.setWindowTitle("Python Chat App")
         self.resize(1100, 750)
         
-        # Center on screen
+        # Căn giữa màn hình
         qr = self.frameGeometry()
         cp = QtGui.QGuiApplication.primaryScreen().availableGeometry().center()
         qr.moveCenter(cp)
@@ -356,10 +356,10 @@ class MainView(QtWidgets.QMainWindow):
         self.setup_sidebar()
         main_layout.addWidget(self.sidebar_widget)
 
-        # Main Content Stack
+        # Ngăn xếp nội dung chính (Main Content Stack)
         self.stack = QtWidgets.QStackedWidget()
         
-        # --- Page 0: User/Group Chat (Splitter) ---
+        # --- Trang 0: Chat Cá nhân/Nhóm (Splitter) ---
         self.chat_container = QtWidgets.QWidget()
         self.chat_layout = QtWidgets.QHBoxLayout(self.chat_container)
         self.chat_layout.setContentsMargins(0, 0, 0, 0)
@@ -382,13 +382,13 @@ class MainView(QtWidgets.QMainWindow):
         self.chat_layout.addWidget(self.splitter)
         self.stack.addWidget(self.chat_container) # Index 0
 
-        # --- Page 1: AI Chat ---
+        # --- Trang 1: Chat AI ---
         self.ai_chat_view = AIChatView()
         self.stack.addWidget(self.ai_chat_view) # Index 1
         
         main_layout.addWidget(self.stack)
 
-        # Logic Setup
+        # Thiết lập Logic
         self.controller.current_user_id = self.user_id
 
         # KẾT NỐI TÍN HIỆU (RẤT QUAN TRỌNG ĐỂ KHÔNG BỊ CRASH)
@@ -402,13 +402,20 @@ class MainView(QtWidgets.QMainWindow):
         self.self_avatar = None
         self.user_avatars = {}
         self.user_names = {}  # Cache tên hiển thị của user
-        self.active_call_dialog = None # Track active call dialog
-        self.incoming_dialog = None # Track incoming call dialog
+        self.active_call_dialog = None # Theo dõi dialog cuộc gọi đang diễn ra
+        self.incoming_dialog = None # Theo dõi dialog cuộc gọi đến
 
         self.is_recording = False
         self.frames = []
         self.audio = None
         self.stream = None
+
+        # Trạng thái chỉ báo đang nhập
+        self.is_typing_active = False
+        self.typing_timer = QtCore.QTimer()
+        self.typing_timer.setSingleShot(True)
+        self.typing_timer.setInterval(3000) # 3 giây
+        self.typing_timer.timeout.connect(self.on_typing_timer_timeout)
 
         self.refresh_self_profile()
         
@@ -469,7 +476,7 @@ class MainView(QtWidgets.QMainWindow):
 
     def setup_user_list(self):
         self.user_list_widget = QtWidgets.QWidget()
-        self.user_list_widget.setMinimumWidth(280) # Prevent too small width
+        self.user_list_widget.setMinimumWidth(280) # Ngăn chiều rộng quá nhỏ
         self.user_list_widget.setStyleSheet("background-color: #ffffff;")
         layout = QtWidgets.QVBoxLayout(self.user_list_widget)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -501,7 +508,7 @@ class MainView(QtWidgets.QMainWindow):
 
         scroll_area = QtWidgets.QScrollArea()
         scroll_area.setWidgetResizable(True)
-        scroll_area.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff) # Disable horizontal scrollbar
+        scroll_area.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff) # Tắt thanh cuộn ngang
         scroll_area.setStyleSheet("border: none; background: white;")
         scroll_content = QtWidgets.QWidget()
         self.chat_list_layout = QtWidgets.QVBoxLayout(scroll_content)
@@ -527,7 +534,7 @@ class MainView(QtWidgets.QMainWindow):
         
         h_layout.addStretch()
         
-        # Call Button (Top Right)
+        # Nút Gọi (Trên cùng bên phải)
         self.btn_call_header = QtWidgets.QPushButton("📞")
         self.btn_call_header.setFixedSize(40, 40)
         self.btn_call_header.setStyleSheet("""
@@ -538,11 +545,39 @@ class MainView(QtWidgets.QMainWindow):
         self.btn_call_header.clicked.connect(self.start_call)
         h_layout.addWidget(self.btn_call_header)
 
+        # Nút Thêm Thành Viên
+        self.btn_add_member = QtWidgets.QPushButton("➕")
+        self.btn_add_member.setFixedSize(40, 40)
+        self.btn_add_member.setToolTip("Thêm thành viên")
+        self.btn_add_member.setStyleSheet("QPushButton { background-color: #f0f2f5; border-radius: 20px; font-size: 18px; border: none; } QPushButton:hover { background-color: #e4e6eb; }")
+        self.btn_add_member.clicked.connect(self.add_member_to_group)
+        self.btn_add_member.hide()
+        h_layout.addWidget(self.btn_add_member)
+
+        # Nút Rời Nhóm
+        self.btn_leave_group = QtWidgets.QPushButton("🚪")
+        self.btn_leave_group.setFixedSize(40, 40)
+        self.btn_leave_group.setToolTip("Rời nhóm")
+        self.btn_leave_group.setStyleSheet("QPushButton { background-color: #ffebee; border-radius: 20px; font-size: 18px; color: #d32f2f; border: none; } QPushButton:hover { background-color: #ffcdd2; }")
+        self.btn_leave_group.clicked.connect(self.leave_group)
+        self.btn_leave_group.hide()
+        h_layout.addWidget(self.btn_leave_group)
+
+        # Nút Xem Thành Viên (Mới)
+        self.btn_view_members = QtWidgets.QPushButton("📜")
+        self.btn_view_members.setFixedSize(40, 40)
+        self.btn_view_members.setToolTip("Xem danh sách thành viên")
+        self.btn_view_members.setStyleSheet("QPushButton { background-color: #f0f2f5; border-radius: 20px; font-size: 18px; border: none; } QPushButton:hover { background-color: #e4e6eb; }")
+        self.btn_view_members.clicked.connect(self.view_group_members)
+        self.btn_view_members.hide()
+        h_layout.addWidget(self.btn_view_members)
+
+
         layout.addWidget(self.chat_header)
 
         self.chat_scroll = QtWidgets.QScrollArea()
         self.chat_scroll.setWidgetResizable(True)
-        # Custom Scrollbar Style (Overlay/Hover effect)
+        # Kiểu thanh cuộn tùy chỉnh (Hiệu ứng Overlay/Hover)
         self.chat_scroll.setStyleSheet("""
             QScrollArea { border: none; background: transparent; }
             QScrollBar:vertical {
@@ -574,6 +609,12 @@ class MainView(QtWidgets.QMainWindow):
         self.chat_scroll.setWidget(self.chat_content)
         layout.addWidget(self.chat_scroll)
 
+        # Nhãn chỉ báo đang nhập (Typing Indicator Label)
+        self.typing_label = QtWidgets.QLabel("")
+        self.typing_label.setStyleSheet("font-style: italic; color: #7f8c8d; font-size: 12px; margin-left: 20px; margin-bottom: 5px;")
+        self.typing_label.hide()
+        layout.addWidget(self.typing_label)
+
         input_container = QtWidgets.QWidget()
         input_container.setStyleSheet("background-color: white; border-top: 1px solid #ddd;")
         input_container.setFixedHeight(70)
@@ -586,7 +627,7 @@ class MainView(QtWidgets.QMainWindow):
         self.btn_vid.clicked.connect(self.send_video)
         inp_layout.addWidget(self.btn_vid)
         
-        # Call Button Removed from here
+        # Nút Gọi đã bị xóa khỏi đây
         # self.btn_call = self._create_icon_button("📞", "#2ecc71", "Gọi điện")
         # self.btn_call.clicked.connect(self.start_call)
         # inp_layout.addWidget(self.btn_call)
@@ -601,6 +642,7 @@ class MainView(QtWidgets.QMainWindow):
         self.message_input.setStyleSheet(
             "QLineEdit { border: none; background-color: #f0f2f5; border-radius: 20px; padding: 10px 15px; font-size: 14px; color: #000000; }")
         self.message_input.returnPressed.connect(self.send_message)
+        self.message_input.textChanged.connect(self.handle_typing_input)
         inp_layout.addWidget(self.message_input)
 
         self.btn_emoji = self._create_icon_button("😊", "#f39c12", "Emoji")
@@ -623,8 +665,8 @@ class MainView(QtWidgets.QMainWindow):
     # --- Logic ---
     def switch_to_user_mode(self):
         self.current_mode = "user"
-        self._clear_chat_ui() # Clear chat state
-        self.stack.setCurrentIndex(0) # Switch to normal chat
+        self._clear_chat_ui() # Xóa trạng thái chat
+        self.stack.setCurrentIndex(0) # Chuyển sang chat thường
         self.btn_chat_one.setStyleSheet(
             "background-color: rgba(255, 255, 255, 0.3); border-radius: 15px; border: 2px solid white; font-size: 24px;")
         self.btn_chat_group.setStyleSheet("background-color: transparent; border: none; font-size: 24px;")
@@ -637,8 +679,8 @@ class MainView(QtWidgets.QMainWindow):
 
     def switch_to_group_mode(self):
         self.current_mode = "group"
-        self._clear_chat_ui() # Clear chat state
-        self.stack.setCurrentIndex(0) # Switch to normal chat
+        self._clear_chat_ui() # Xóa trạng thái chat
+        self.stack.setCurrentIndex(0) # Chuyển sang chat thường
         self.btn_chat_group.setStyleSheet(
             "background-color: rgba(255, 255, 255, 0.3); border-radius: 15px; border: 2px solid white; font-size: 24px;")
         self.btn_chat_one.setStyleSheet("background-color: transparent; border: none; font-size: 24px;")
@@ -646,12 +688,16 @@ class MainView(QtWidgets.QMainWindow):
         self.btn_add_group.show()
         self.btn_add_group.show()
         self.header_label.setText("Chọn một nhóm để chat")
+        self.header_label.setText("Chọn một nhóm để chat")
         if hasattr(self, 'btn_call_header'): self.btn_call_header.hide()
+        if hasattr(self, 'btn_add_member'): self.btn_add_member.hide() # Ban đầu ẩn, chỉ hiện khi chọn
+        if hasattr(self, 'btn_leave_group'): self.btn_leave_group.hide()
         self.load_groups()
 
     def _clear_chat_ui(self):
         self.current_receiver_id = None
         self.current_receiver_name = None
+        if hasattr(self, 'typing_label'): self.typing_label.hide()
         # Xóa tin nhắn cũ
         for i in reversed(range(self.chat_messages_layout.count())):
             item = self.chat_messages_layout.itemAt(i)
@@ -674,7 +720,7 @@ class MainView(QtWidgets.QMainWindow):
 
     @QtCore.Slot()
     def open_ai_chat(self):
-        self.stack.setCurrentIndex(1) # Switch to AI chat
+        self.stack.setCurrentIndex(1) # Chuyển sang chat AI
         self.btn_ai_chat.setStyleSheet(
             "background-color: rgba(255, 255, 255, 0.3); border-radius: 15px; border: 2px solid white; font-size: 24px;")
         self.btn_chat_one.setStyleSheet("background-color: transparent; border: none; font-size: 24px;")
@@ -684,7 +730,7 @@ class MainView(QtWidgets.QMainWindow):
     @QtCore.Slot()
     def load_groups(self):
         try:
-            self.all_groups = self.controller.get_groups() # Cache groups
+            self.all_groups = self.controller.get_groups() # Cache nhóm
             self.update_list_display(self.search_box.text())
         except Exception as e:
             print(f"Lỗi load groups: {e}")
@@ -692,7 +738,7 @@ class MainView(QtWidgets.QMainWindow):
     @QtCore.Slot()
     def load_users(self):
         try:
-            # Cache all users
+            # Cache tất cả user
             self.all_users = self.controller.get_users()
             self.user_avatars = {}
             self.user_names = {}
@@ -709,27 +755,27 @@ class MainView(QtWidgets.QMainWindow):
 
     def highlight_text(self, text, query):
         if not query: return text
-        # Regex to simple highlighting
+        # Regex để highlight đơn giản
         try:
-             # Case insensitive replace maintaining original case
+             # Thay thế không phân biệt chữ hoa chữ thường nhưng giữ nguyên text gốc
             pattern = re.compile(re.escape(query), re.IGNORECASE)
             return pattern.sub(lambda m: f"<span style='color: #2980b9; font-weight: 900;'>{m.group(0)}</span>", text)
         except:
              return text
 
     def update_list_display(self, filter_text=""):
-        # Clear current list
+        # Xóa danh sách hiện tại
         while self.chat_list_layout.count() > 0:
             item = self.chat_list_layout.takeAt(0)
             if item.widget(): item.widget().deleteLater()
         
-        self.chat_list_layout.addStretch() # Ensure stretch is at end (removed and re-added logic below)
+        self.chat_list_layout.addStretch() # Đảm bảo stretch ở cuối (đã xóa và thêm lại logic bên dưới)
         # Actually stretch should be at bottom, let's just clear widgets and append.
         # But we need to keep layout logic. The original had addStretch at the beginning??
         # Checked `setup_user_list`: `self.chat_list_layout.addStretch()` was added initially.
         # Let's just remove all and add items then add stretch.
         
-        # Determine source
+        # Xác định nguồn dữ liệu
         source_list = self.all_groups if self.current_mode == "group" else self.all_users
         
         count = 0
@@ -742,25 +788,25 @@ class MainView(QtWidgets.QMainWindow):
                 item_type = "group"
             else:
                 uid = item_data["user_id"]
-                if uid == self.user_id: continue # Skip self
+                if uid == self.user_id: continue # Bỏ qua chính mình
                 name = item_data["display_name"]
                 avatar = item_data.get("avatar")
                 last_msg = "Nhấn để xem tin nhắn"
                 item_type = "user"
 
-            # Filter
+            # Bộ lọc
             if filter_text and filter_text.lower() not in name.lower():
                 continue
             
-            # Highlight Name
+            # Highlight tên
             display_name_html = self.highlight_text(name, filter_text)
             
-            # Create Item
+            # Tạo Item
             # Modified ChatListItem needed?
             # ChatListItem takes display_name string and puts it in QLabel.
             # QLabel supports rich text if we pass it properly.
             
-            # Use a slightly modified approach: Pass HTML to ChatListItem?
+            # Sử dụng cách tiếp cận sửa đổi nhẹ: Truyền HTML vào ChatListItem?
             # It uses `QtWidgets.QLabel(display_name)` -> We can setText with HTML.
             
             widget = ChatListItem(uid, display_name_html, last_msg, avatar, item_type=item_type)
@@ -768,7 +814,7 @@ class MainView(QtWidgets.QMainWindow):
             # In ChatListItem.__init__, name_label is created.
             # We can rely on QLabel auto-detecting HTML or set format.
             # Let's modify ChatListItem class first if needed. 
-            # Actually, standard QLabel auto-detects HTML.
+            # Thực ra, QLabel chuẩn tự động phát hiện HTML.
             
             widget.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
             widget.mousePressEvent = lambda e, u=uid, n=name: self.select_chat_by_id(u, n, item_type)
@@ -793,14 +839,17 @@ class MainView(QtWidgets.QMainWindow):
         icon = "👥" if item_type == "group" else "💬"
         self.header_label.setText(f"{icon} {display_name}")
 
-        # Hide Call Button for Group Logic
-        if hasattr(self, 'btn_call_header'):
-            if item_type == "group":
-                self.btn_call_header.hide()
-            else:
-                # Also hide call button if it's the AI chatbot (assuming id=0 or specific check)
-                # But for now, just User vs Group.
-                self.btn_call_header.show()
+        # Ẩn nút gọi cho logic nhóm
+        if item_type == "group":
+            if hasattr(self, 'btn_call_header'): self.btn_call_header.hide()
+            if hasattr(self, 'btn_add_member'): self.btn_add_member.show()
+            if hasattr(self, 'btn_view_members'): self.btn_view_members.show()
+            if hasattr(self, 'btn_leave_group'): self.btn_leave_group.show()
+        else:
+            if hasattr(self, 'btn_call_header'): self.btn_call_header.show()
+            if hasattr(self, 'btn_add_member'): self.btn_add_member.hide()
+            if hasattr(self, 'btn_view_members'): self.btn_view_members.hide()
+            if hasattr(self, 'btn_leave_group'): self.btn_leave_group.hide()
 
         for i in reversed(range(self.chat_messages_layout.count())):
             item = self.chat_messages_layout.itemAt(i)
@@ -851,11 +900,11 @@ class MainView(QtWidgets.QMainWindow):
                 elif msg.get("is_call_log"): 
                     self.add_message_to_chat(msg["message"], name, is_self, is_call_log=True, avatar_base64=avatar)
                 elif msg.get("is_system"):
-                    self.add_system_message(msg["message"])
+                     self.add_system_message(msg["message"])
                 else:
                     self.add_message_to_chat(msg["message"], name, is_self, avatar_base64=avatar)
             
-            # Force scroll to bottom after layout update
+            # Buộc cuộn xuống dưới cùng sau khi cập nhật layout
             QtCore.QTimer.singleShot(100, self.scroll_to_bottom)
 
         except Exception as e:
@@ -881,7 +930,7 @@ class MainView(QtWidgets.QMainWindow):
         bubble_layout = QtWidgets.QHBoxLayout(bubble_widget)
         bubble_layout.setContentsMargins(0, 5, 0, 5) # Increased margins
         
-        # SYSTEM / CALL LOG STYLE
+        # STYLE TIN NHẮN HỆ THỐNG / NHẬT KÝ CUỘC GỌI
         if is_call_log:
             lbl = QtWidgets.QLabel(message)
             lbl.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
@@ -894,19 +943,19 @@ class MainView(QtWidgets.QMainWindow):
                 margin-bottom: 5px;
             """)
             
-            # Colors and Icons based on content
+            # Màu sắc và Icon dựa trên nội dung
             txt = message.strip()
-            # If text is EXACTLY "Cuộc gọi thoại", it means Rejected/Missed (No duration)
+            # Nếu text CHÍNH XÁC là "Cuộc gọi thoại", nghĩa là Từ chối/Nhỡ (Không có thời lượng)
             if txt == "Cuộc gọi thoại":
                 lbl.setText(f"📞 ❌ {txt}")
                 lbl.setStyleSheet(lbl.styleSheet() + "color: #e74c3c; font-style: italic;") # Red
             
-            # If text starts with "Cuộc gọi thoại" and has newline (Duration info), it means Ended
+            # Nếu text bắt đầu bằng "Cuộc gọi thoại" và có xuống dòng (Thông tin thời lượng), nghĩa là Đã kết thúc
             elif txt.startswith("Cuộc gọi thoại\n"):
                 lbl.setText(f"📞 {txt}")
                 lbl.setStyleSheet(lbl.styleSheet() + "color: #2c3e50; font-weight: bold;") # Dark Blue
             
-            # Fallback (Old logs or other system messages)
+            # Dự phòng (Log cũ hoặc tin nhắn hệ thống khác)
             else:
                 if "từ chối" in txt.lower() or "nhỡ" in txt.lower():
                      lbl.setText(f"📞 ❌ {txt}")
@@ -919,7 +968,7 @@ class MainView(QtWidgets.QMainWindow):
             bubble_layout.addStretch()
             return bubble_widget
 
-        # Normal Message style
+        # Style tin nhắn thường
         bubble_layout.setSpacing(10)
         avatar = QtWidgets.QLabel()
         avatar.setFixedSize(35, 35)
@@ -996,6 +1045,12 @@ class MainView(QtWidgets.QMainWindow):
 
     def send_message(self):
         msg = self.message_input.text().strip()
+        
+        # Dừng typing ngay lập tức khi gửi
+        if self.is_typing_active:
+             self.typing_timer.stop()
+             self.on_typing_timer_timeout()
+
         if not msg or not self.current_receiver_id: return
         try:
             if self.current_mode == "user":
@@ -1027,7 +1082,7 @@ class MainView(QtWidgets.QMainWindow):
         if not self.current_receiver_id: return
         file_path, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Chọn video", "", "Video (*.mp4 *.avi)")
         if file_path:
-            # Check size limit (50MB)
+            # Kiểm tra giới hạn kích thước (50MB)
             file_size = os.path.getsize(file_path)
             if file_size > 50 * 1024 * 1024:
                 QtWidgets.QMessageBox.warning(self, "File quá lớn", "Video không được vượt quá 50MB để đảm bảo tốc độ.")
@@ -1047,12 +1102,12 @@ class MainView(QtWidgets.QMainWindow):
             QtWidgets.QMessageBox.warning(self, "Lỗi", "Vui lòng chọn người để gọi.")
             return
         
-        # 1. Show ActiveCallDialog (Caller State)
+        # 1. Hiện ActiveCallDialog (Trạng thái Người gọi)
         self.active_call_dialog = ActiveCallDialog(self.current_receiver_name, self.user_avatars.get(self.current_receiver_id), is_caller=True, parent=self)
         self.active_call_dialog.hangup_signal.connect(lambda: self.end_call_remote(self.current_receiver_id))
         self.active_call_dialog.show()
         
-        # 2. Send Call Request
+        # 2. Gửi yêu cầu gọi
         self.controller.send_signal(self.current_receiver_id, "call_request", {
             "caller_name": self.display_name,
             "caller_avatar": self.self_avatar
@@ -1067,13 +1122,13 @@ class MainView(QtWidgets.QMainWindow):
         sender_id = msg.get("sender_id")
         
         if signal_type == "call_request":
-            # Show Incoming Call Dialog
+            # Hiện Dialog cuộc gọi đến
             caller_name = msg.get("caller_name", "Unknown")
             caller_avatar = msg.get("caller_avatar")
             
             self.incoming_dialog = IncomingCallDialog(caller_name, caller_avatar, parent=self)
             
-            # Connect Signals
+            # Kết nối tín hiệu
             self.incoming_dialog.accept_signal.connect(lambda: self.accept_call(sender_id, caller_name, caller_avatar))
             self.incoming_dialog.reject_signal.connect(lambda: self.reject_call(sender_id))
             
@@ -1089,8 +1144,8 @@ class MainView(QtWidgets.QMainWindow):
                 self.active_call_dialog = None
                 QtWidgets.QMessageBox.information(self, "Cuộc gọi", "Người gọi đang bận.")
                 
-                # Log missed call locally (Caller side)
-                # Matches the format for Rejected call (Exact string)
+                # Ghi log cuộc gọi nhỡ cục bộ (Phía người gọi)
+                # Khớp format cho cuộc gọi bị từ chối (Chuỗi chính xác)
                 # msg_content = "Cuộc gọi thoại"
                 # self.add_message_to_chat(msg_content, "Bạn", is_self=True, is_call_log=True, avatar_base64=self.self_avatar)
                 pass
@@ -1106,64 +1161,115 @@ class MainView(QtWidgets.QMainWindow):
             if hasattr(self, 'incoming_dialog') and self.incoming_dialog and self.incoming_dialog.isVisible():
                 self.incoming_dialog.close()
             
+            # Ghi log cuộc gọi kết thúc
             # Log call ended
-            # Log call ended
-            # "call_ended" is sent by the one who hung up.
+            # "call_ended" được gửi bởi người dập máy.
             # The one who hangs up should be the one to save the log to DB?
             # Or both?
-            # Let's stick to: The "Hangup" action triggers the log save.
-            # The "call_ended" signal just closes the UI.
-            # The log message will arrive via standard message channel.
+            # Hãy giữ nguyên: Hành động "Dập máy" kích hoạt lưu log.
+            # Tín hiệu "call_ended" chỉ đóng UI.
+            # Tin nhắn log sẽ đến qua kênh tin nhắn chuẩn.
             pass
 
+        elif signal_type == "typing":
+            # Kiểm tra xem tín hiệu này có phải từ người mình đang chat không
+            target_sender_id = sender_id
+            
+            # Note: Với chat nhóm, logic có thể khác (ai đang gõ?), nhưng hiện tại đơn giản nhất:
+            # Nếu chat User chuẩn:
+            if self.current_mode == "user" and self.current_receiver_id == target_sender_id:
+                is_typing = msg.get("is_typing", False)
+                if is_typing:
+                    self.typing_label.setText(f"{self.current_receiver_name} đang soạn tin...")
+                    self.typing_label.show()
+                else:
+                    self.typing_label.hide()
+            
+            # Nếu xử lý chat nhóm (Mở rộng tùy chọn):
+            # If we receive a typing signal in a group context (depends on if server relays it with group_id or just sender_id)
+            # Current server relays signal with sender_id. 
+            # If we are in a group, and one of the members sends a typing signal...
+            # The signal mechanism in chat_mixin.py sends to 'receiver_id'. 
+            # If chatting in group, receiver_id is group_id?
+            # chat_mixin.send_typing_status(receiver_id, ...)
+            # If it's a group, we are sending to the group_id?
+            # Server handles signal relay by looking up 'target_id' in 'user_sockets'. 
+            # Groups are NOT in user_sockets. 
+            # So, currently this typing indicator ONLY works for 1-1 Chat because signal routing is user-to-user.
+            # That fits the "Client-Server Chat Application... without modifying core database" constraint perfectly
+            # as supporting group typing would require server logic change to broadcast signal to group members.
+            pass
+
+    def handle_typing_input(self, text):
+        if not self.current_receiver_id: return
+        # Chỉ hỗ trợ typing 1-1 hiện tại do giới hạn tín hiệu server (target_id phải là user socket)
+        if self.current_mode != "user": return
+
+        if not self.is_typing_active and text:
+            self.is_typing_active = True
+            self.controller.send_typing_status(self.current_receiver_id, True)
+            self.typing_timer.start()
+        elif self.is_typing_active:
+             if not text: # Cleared text
+                 self.typing_timer.stop()
+                 self.on_typing_timer_timeout()
+             else:
+                 # Debounce: Restart timer
+                 self.typing_timer.start()
+
+    def on_typing_timer_timeout(self):
+        self.is_typing_active = False
+        if self.current_receiver_id and self.current_mode == "user":
+            self.controller.send_typing_status(self.current_receiver_id, False)
+
     def accept_call(self, sender_id, name, avatar):
-        # 1. Close Incoming Dialog (handled by class)
-        # 2. Show Active Dialog
+        # 1. Đóng Dialog cuộc gọi đến (được xử lý bởi class)
+        # 2. Hiện Dialog đang gọi
         self.active_call_dialog = ActiveCallDialog(name, avatar, is_caller=False, parent=self)
         self.active_call_dialog.start_timer()
         self.active_call_dialog.show()
         
-        # 3. Send Accepted Signal
+        # 3. Gửi tín hiệu chấp nhận
         self.controller.send_signal(sender_id, "call_accepted")
         
-        # Handle Hangup
+        # Xử lý dập máy
         self.active_call_dialog.hangup_signal.connect(lambda: self.end_call_remote(sender_id))
 
     def reject_call(self, sender_id):
         self.controller.send_signal(sender_id, "call_rejected")
-        # Log missed (Rejected) - This saves to DB for both
-        # Using exact string "Cuộc gọi thoại" to denote rejected/missed
+        # Ghi log nhỡ (Từ chối) - Cái này lưu vào DB cho cả hai
+        # Dùng chuỗi chính xác "Cuộc gọi thoại" để biểu thị từ chối/nhỡ
         self.controller.send_call_log(sender_id, "Cuộc gọi thoại")
-        # Add local log for self
+        # Thêm log cục bộ cho bản thân
         self.add_message_to_chat("Cuộc gọi thoại", "Bạn", is_self=True, is_call_log=True, avatar_base64=self.self_avatar)
 
     def end_call_remote(self, target_id):
-        # I am hanging up.
+        # Tôi đang dập máy.
         duration = self.active_call_dialog.timer_lbl.text()
         
-        # Calculate start time (Current time - duration) roughly, or just use Current Time as "Call Ended Time"
+        # Tính thời gian bắt đầu (Hiện tại - thời lượng) một cách tương đối, hoặc dùng Giờ hiện tại làm "Giờ kết thúc cuộc gọi"
         import datetime
         now = datetime.datetime.now().strftime("%H:%M")
         
-        # Check if call was actually connected (duration > 00:00)
-        # If 00:00, it means Caller Cancelled or Receiver Rejected before Answer
+        # Kiểm tra xem cuộc gọi có thực sự kết nối không (duration > 00:00)
+        # Nếu 00:00, nghĩa là Người gọi hủy hoặc Người nhận từ chối trước khi Trả lời
         if duration == "00:00":
              log_msg = "Cuộc gọi thoại" # Triggers Red X logic
         else:
              # Msg format: "Cuộc gọi thoại\n[Time] - [Duration]"
              log_msg = f"Cuộc gọi thoại\n{now} - {duration}"
         
-        # 1. Notify peer to close UI
+        # 1. Thông báo cho đối phương đóng UI
         self.controller.send_signal(target_id, "call_ended")
         
-        # 2. Save log to DB and User B
+        # 2. Lưu log vào DB và User B
         self.controller.send_call_log(target_id, log_msg)
         
-        # 3. Show log locally (User A)
+        # 3. Hiện log cục bộ (User A)
         self.add_message_to_chat(log_msg, "Bạn", is_self=True, is_call_log=True, avatar_base64=self.self_avatar)
 
 
-    # === THREAD-SAFE SIGNAL SLOTS ===
+    # === CÁC SLOT TÍN HIỆU AN TOÀN VỚI THREAD (THREAD-SAFE SIGNAL SLOTS) ===
     def check_incoming_messages(self):
         while True:
             try:
@@ -1223,9 +1329,11 @@ class MainView(QtWidgets.QMainWindow):
                         if self.current_mode == "user" and self.current_receiver_id == sender_id:
                             should_display = True
 
+                    is_system = msg.get('is_system', False)
+
                     if should_display:
                         # Truyền cả sender_id và sender_avatar để hiển thị đúng
-                        self.message_received.emit(content, sender_name, t, target_id_for_signal, sender_id, sender_avatar)
+                        self.message_received.emit(content, sender_name, t, target_id_for_signal, sender_id, sender_avatar, is_system)
             except Exception as e:
                 print(f"Error checking messages: {e}")
                 break
@@ -1348,7 +1456,7 @@ class MainView(QtWidgets.QMainWindow):
         if self.current_receiver_id and self.current_receiver_name:
             self.select_chat_by_id(self.current_receiver_id, self.current_receiver_name, self.current_mode)
 
-    def display_incoming_message(self, message, sender_name, message_type, target_id, sender_id=None, sender_avatar=None):
+    def display_incoming_message(self, message, sender_name, message_type, target_id, sender_id=None, sender_avatar=None, is_system=False):
         is_img = (message_type == 'image')
         is_voice = (message_type == 'voice')
         is_video = (message_type == 'video')
@@ -1361,6 +1469,10 @@ class MainView(QtWidgets.QMainWindow):
         elif not avatar and self.current_mode == "user" and target_id in self.user_avatars:
             avatar = self.user_avatars[target_id]
         
+        if is_system:
+             self.add_system_message(message)
+             return
+
         self.add_message_to_chat(message, sender_name, False, is_img, is_voice, is_video, is_call_log, avatar)
 
     def refresh_self_profile(self):
@@ -1432,7 +1544,7 @@ class MainView(QtWidgets.QMainWindow):
             wf.writeframes(b''.join(self.frames));
             wf.close()
             
-            # Check size limit (10MB)
+            # Kiểm tra giới hạn kích thước (10MB)
             voice_data_bytes = buffer.getvalue()
             if len(voice_data_bytes) > 10 * 1024 * 1024:
                  QtWidgets.QMessageBox.warning(self, "Ghi âm quá dài", "File ghi âm quá lớn (>10MB). Vui lòng ghi âm ngắn hơn.")
@@ -1446,6 +1558,49 @@ class MainView(QtWidgets.QMainWindow):
                     self.controller.send_group_message(self.current_receiver_id, "", is_voice=True, voice_data=voice_b64)
                     
                 self.add_message_to_chat(voice_b64, "Bạn", True, is_voice=True, avatar_base64=self.self_avatar)
+                self.add_message_to_chat(voice_b64, "Bạn", True, is_voice=True, avatar_base64=self.self_avatar)
+
+    def add_member_to_group(self):
+        if not self.current_receiver_id or self.current_mode != "group": return
+        
+        # Lấy danh sách thành viên hiện tại để lọc
+        current_members = self.controller.get_group_members(self.current_receiver_id)
+        current_member_ids = [str(uid) for uid in current_members]
+
+        all_users = [
+            u for u in self.controller.get_users()
+            if str(u['user_id']) != str(self.user_id) and str(u['user_id']) not in current_member_ids
+        ]
+        
+        # Tái sử dụng CreateGroupDialog nhưng để chọn item
+        dialog = CreateGroupDialog(self, all_users, is_add_mode=True)
+        # Tiêu đề được xử lý bởi is_add_mode
+        
+        if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
+            _, member_ids = dialog.get_data()
+            if member_ids:
+                resp = self.controller.add_group_member(self.current_receiver_id, member_ids)
+                if resp.get("status") == "success":
+                   # Success handled by notification or just ok
+                   pass
+                else:
+                   QtWidgets.QMessageBox.critical(self, "Lỗi", resp.get("message", "Lỗi thêm thành viên"))
+
+    def leave_group(self):
+        if not self.current_receiver_id or self.current_mode != "group": return
+        
+        reply = QtWidgets.QMessageBox.question(
+            self, 'Rời nhóm', 
+            "Bạn có chắc chắn muốn rời nhóm?\nNếu bạn là thành viên cuối cùng, nhóm sẽ bị giải tán.",
+            QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
+            QtWidgets.QMessageBox.StandardButton.No)
+            
+        if reply == QtWidgets.QMessageBox.StandardButton.Yes:
+            resp = self.controller.leave_group(self.current_receiver_id)
+            if resp.get("status") == "success":
+                self.switch_to_group_mode() # Reload view
+            else:
+                QtWidgets.QMessageBox.critical(self, "Lỗi", resp.get("message", "Lỗi rời nhóm"))
 
     def open_profile_dialog(self):
         d = ProfileDialog(self.controller, self.display_name, self.self_avatar, self)
@@ -1469,6 +1624,52 @@ class MainView(QtWidgets.QMainWindow):
                 QtCore.QTimer.singleShot(100, lambda: self.select_chat_by_id(
                     saved_receiver_id, saved_receiver_name, saved_mode))
                 QtCore.QTimer.singleShot(200, lambda: self.reload_current_chat() if self.current_receiver_id else None)
+
+
+    def view_group_members(self):
+        """Hiển thị danh sách thành viên nhóm dưới dạng Menu dội xuống"""
+        if not self.current_receiver_id or self.current_mode != "group": return
+
+        # 1. Fetch mới nhất từ server
+        members_ids = self.controller.get_group_members(self.current_receiver_id)
+        if not members_ids: return
+
+        # 2. Tạo Menu
+        menu = QtWidgets.QMenu(self)
+        menu.setStyleSheet("""
+            QMenu { background-color: white; border: 1px solid #ddd; border-radius: 5px; padding: 5px; }
+            QMenu::item { padding: 8px 20px; font-size: 14px; color: black; }
+            QMenu::item:selected { background-color: #f0f2f5; color: black; }
+        """)
+
+        # 3. Populate
+        # Convert IDs to Names logic
+        # We need a way to get name from ID even if not in cache.
+        # Ideally get_users() contains all.
+        
+        # Get all users map for lookup
+        all_users_map = {u['user_id']: u['display_name'] for u in self.controller.get_users()}
+        
+        # Add Title Action (Disabled)
+        title_action = QtGui.QAction(f"Thành viên ({len(members_ids)})", self)
+        title_action.setEnabled(False)
+        title_font = title_action.font()
+        title_font.setBold(True)
+        title_action.setFont(title_font)
+        menu.addAction(title_action)
+        menu.addSeparator()
+
+        for mid in members_ids:
+            name = all_users_map.get(mid, f"User {mid}")
+            if str(mid) == str(self.user_id):
+                name += " (Bạn)"
+            
+            action = QtGui.QAction(name, self)
+            # Optional: Add icon/avatar? For now just text.
+            menu.addAction(action)
+
+        # 4. Show Menu button relative position
+        menu.exec(self.btn_view_members.mapToGlobal(QtCore.QPoint(0, self.btn_view_members.height())))
 
     def logout(self):
         reply = QtWidgets.QMessageBox.question(self, 'Đăng xuất', 'Bạn có chắc chắn muốn đăng xuất?',

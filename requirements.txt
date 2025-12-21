@@ -1,2 +1,6 @@
 PySide6
+mysql-connector-python
+bcrypt
 google-generativeai
+markdown
+pyaudio
