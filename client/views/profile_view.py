@@ -4,7 +4,7 @@ import base64
 
 
 class ProfileDialog(QtWidgets.QDialog):
-    def __init__(self, controller, current_display_name, current_avatar_base64=None, parent=None):
+    def __init__(self, controller, current_display_name, current_avatar_base64=None, current_is_invisible=False, parent=None):
         super().__init__(parent)
         self.controller = controller
         self.setWindowTitle("Cập nhật thông tin cá nhân")
@@ -41,6 +41,11 @@ class ProfileDialog(QtWidgets.QDialog):
         form.addRow("Mật khẩu mới", self.new_password_edit)
         form.addRow("Nhập lại mật khẩu", self.new_password2_edit)
         layout.addLayout(form)
+
+        # Status Checkbox (Invisible Mode)
+        self.invoice_mode_cb = QtWidgets.QCheckBox("Chế độ ẩn danh (Người khác sẽ thấy bạn Offline)")
+        self.invoice_mode_cb.setChecked(current_is_invisible)
+        layout.addWidget(self.invoice_mode_cb)
 
         # Status label
         self.status_label = QtWidgets.QLabel("")
@@ -131,10 +136,15 @@ class ProfileDialog(QtWidgets.QDialog):
                     display_name=name, 
                     avatar_data=self.avatar_base64,
                     old_password=self.old_password_edit.text(),
-                    new_password=self.new_password_edit.text()
+                    new_password=self.new_password_edit.text(),
+                    is_invisible=self.invoice_mode_cb.isChecked()
                 )
             else:
-                resp = self.controller.update_profile(display_name=name, avatar_data=self.avatar_base64)
+                resp = self.controller.update_profile(
+                    display_name=name, 
+                    avatar_data=self.avatar_base64,
+                    is_invisible=self.invoice_mode_cb.isChecked()
+                )
             
             if resp.get("status") != "success":
                 self.status_label.setText(resp.get("message", "Không thể cập nhật hồ sơ"))

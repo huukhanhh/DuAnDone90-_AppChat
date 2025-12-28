@@ -29,6 +29,7 @@ class ServerController:
         
         self.clients = {}      # socket -> user_id
         self.user_sockets = {} # user_id -> socket
+        self.user_visibility = {} # user_id -> bool (Is Visible?)
         self.offline_messages = {}
         self.lock = threading.Lock()
         
@@ -102,16 +103,67 @@ class ServerController:
                     if action == "login":
                         response = self.auth_ctrl.handle_login(request.get("email"), request.get("password"))
                         if response.get("status") == "success":
-                            user_id = response.get("user_id")
+                            user_id = int(response.get("user_id")) # Ensure int
+                            is_invisible = response.get("is_invisible", False)
+                            
+                            old_socket_to_close = None  # Store old socket to close OUTSIDE lock
+                            
+                            # === ATOMIC OPERATION: Kick old + Register new in ONE lock ===
                             with self.lock:
+                                # Step 1: Check and prepare to kick old session
+                                if user_id in self.user_sockets:
+                                    old_socket = self.user_sockets[user_id]
+                                    
+                                    # Send force_logout to old session
+                                    try:
+                                        force_logout_packet = {
+                                            "action": "force_logout",
+                                            "message": "Tài khoản đã đăng nhập từ thiết bị khác."
+                                        }
+                                        self.send_to_client(old_socket, force_logout_packet)
+                                        print(f"[DEBUG] Sent force_logout packet to old socket for user {user_id}")
+                                        logger.info(f"Sent force_logout to old session of user {user_id}")
+                                    except Exception as e:
+                                        logger.warning(f"Could not send force_logout: {e}")
+                                    
+                                    # Remove old session from all tracking IMMEDIATELY
+                                    if old_socket in self.clients:
+                                        del self.clients[old_socket]
+                                    # Note: user_sockets[user_id] will be overwritten below
+                                    # Note: user_visibility[user_id] will be overwritten below
+                                    
+                                    old_socket_to_close = old_socket
+                                    logger.info(f"Kicked old session of user {user_id}")
+                                
+                                # Step 2: Register new session (STILL IN SAME LOCK)
                                 self.clients[client_socket] = user_id
                                 self.user_sockets[user_id] = client_socket
+                                self.user_visibility[user_id] = False if is_invisible else True
+                                self.model.update_last_active(user_id)
+                            # === END ATOMIC OPERATION ===
+                            
+                            # Close old socket OUTSIDE lock (to avoid blocking)
+                            if old_socket_to_close:
+                                try:
+                                    old_socket_to_close.shutdown(socket.SHUT_RDWR)
+                                except:
+                                    pass
+                                try:
+                                    old_socket_to_close.close()
+                                except:
+                                    pass
+                            
+                            print(f"[DEBUG login] Registered user_id={user_id} (type={type(user_id)}). user_sockets={list(self.user_sockets.keys())}")
                             
                             # Gửi tin nhắn offline
                             if user_id in self.offline_messages:
                                 for msg in self.offline_messages[user_id]:
                                     self.send_to_client(client_socket, msg)
                                 del self.offline_messages[user_id]
+
+                            # Broadcast USER_ONLINE nếu user KHÔNG ẩn danh
+                            if self.user_visibility[user_id]:
+                                self.broadcast_user_status(user_id, "online")
                                 
                     elif action == "register":
                         response = self.auth_ctrl.handle_register(request.get("display_name"), request.get("email"), request.get("password"))
@@ -119,14 +171,37 @@ class ServerController:
                     elif action == "resume_session":
                         uid = request.get("user_id")
                         if uid:
-                            with self.lock:
-                                self.clients[client_socket] = uid
-                                self.user_sockets[uid] = client_socket
-                            response = {"status": "success"}
+                            try:
+                                uid = int(uid) # Ensure int
+                                with self.lock:
+                                    # === SINGLE SESSION ENFORCEMENT ===
+                                    # Reject resume if another session is active
+                                    if uid in self.user_sockets and self.user_sockets[uid] != client_socket:
+                                        logger.warning(f"Resume session rejected for User {uid} - another session is active")
+                                        response = {"status": "error", "message": "Session đã bị thay thế bởi đăng nhập khác"}
+                                    else:
+                                        self.clients[client_socket] = uid
+                                        self.user_sockets[uid] = client_socket
+                                        logger.info(f"Resume session success for User {uid}. Sockets: {list(self.user_sockets.keys())}")
+                                        response = {"status": "success"}
+                                        
+                                        # Broadcast online status on resume if visible
+                                        is_visible = self.user_visibility.get(uid, True)
+                                        if is_visible:
+                                             self.broadcast_user_status(uid, "online")
+                            except ValueError:
+                                response = {"status": "error", "message": "Invalid User ID"}
+                            
+                        else:
+                            response = {"status": "error", "message": "Missing User ID"}
+                        
+                        self.send_to_client(client_socket, response)
 
                     # 2. USER / PROFILE
                     elif action == "get_users":
-                        response = self.user_ctrl.get_users()
+                        uid = self.clients.get(client_socket)
+                        self.handle_get_users(client_socket, uid)
+                        continue  # handle_get_users sends the response itself
                         
                     elif action == "get_profile":
                         uid = self.clients.get(client_socket)
@@ -135,18 +210,56 @@ class ServerController:
                     elif action == "update_profile":
                         uid = self.clients.get(client_socket)
                         if uid:
-                            response = self.user_ctrl.update_profile(uid, request.get("display_name"), request.get("avatar"), request.get("old_password"), request.get("new_password"))
+                            # 1. Get current state to compare
+                            # old_profile_data = self.user_ctrl.get_profile(uid) # Optional optimization
+                            
+                            is_invisible_req = request.get("is_invisible")
+                            
+                            # 2. Call controller to update DB
+                            response = self.user_ctrl.update_profile(
+                                uid, 
+                                request.get("display_name"), 
+                                request.get("avatar"), 
+                                request.get("old_password"), 
+                                request.get("new_password"),
+                                is_invisible_req
+                            )
+                            
                             if response["status"] == "success":
-                                # Phát tán cập nhật (Broadcast Update)
+                                is_invisible_db = response.get("is_invisible") # Assuming controller/model *could* return this, but currently it returns generic success msg. 
+                                # We rely on the request or re-fetching profile.
+                                
+                                # Update RAM Visibility if changed
+                                if is_invisible_req is not None:
+                                    # Convert to bool to be safe
+                                    new_is_invisible = bool(is_invisible_req)
+                                    with self.lock:
+                                        # Currently, if invisible is True -> visibility is False
+                                        old_visibility = self.user_visibility.get(uid, True)
+                                        current_visibility = not new_is_invisible
+                                        self.user_visibility[uid] = current_visibility
+                                        
+                                        # Compare and Broadcast Status Change
+                                        if old_visibility != current_visibility:
+                                            if current_visibility: # Invisible -> Visible
+                                                self.broadcast_user_status(uid, "online")
+                                            else: # Visible -> Invisible (Offline)
+                                                # Update last active time for fake offline
+                                                ts = self.model.update_last_active(uid)
+                                                self.broadcast_user_status(uid, "offline", str(ts) if ts else None)
+
+                                # Broadcast Profile Update (Display Name / Avatar)
+                                # We re-fetch profile to get the latest DB state
                                 new_profile = self.user_ctrl.get_profile(uid)
                                 noti_data = {
                                     "action": "profile_update_notification",
                                     "user_id": uid,
                                     "display_name": new_profile.get("display_name")
+                                    # We could include avatar hash here too if needed
                                 }
-                                with self.lock:
-                                    for u_id, sock in list(self.user_sockets.items()):
-                                        self.send_to_client(sock, noti_data)
+                                self.broadcast_to_all(noti_data) # Use helper if available, else loop
+                                
+                            self.send_to_client(client_socket, response)
 
                     # 3. CHAT 1-1
                     elif action == "get_chat_history":
@@ -351,6 +464,7 @@ class ServerController:
                                     response = {"status": "error", "code": "USER_OFFLINE"}
 
                     # Respond
+                    print(f"[DEBUG response] Sending response to client: action={action}, status={response.get('status') if response else 'None'}")
                     self.send_to_client(client_socket, response)
 
                 except json.JSONDecodeError:
@@ -361,12 +475,86 @@ class ServerController:
                     logger.error(f"Server Loop Error: {e}")
                     break
         finally:
+            uid = None
+            is_visible = False
+            is_active_socket = False  # Flag: Is this socket still the active one for this user?
+            
+            # Step 1: Get user info and check if this socket is still active
             with self.lock:
                 if client_socket in self.clients:
                     uid = self.clients[client_socket]
+                    is_visible = self.user_visibility.get(uid, True)
+                    # Check if this socket is still the active socket for this user
+                    # If not, it means user logged in elsewhere and this is the kicked session
+                    is_active_socket = (uid in self.user_sockets and self.user_sockets[uid] == client_socket)
+            
+            # Step 2: Only broadcast offline if THIS socket is still the active one
+            # (Don't broadcast if this is a kicked session - user is still online on new device)
+            if uid and is_active_socket:
+                last_active = self.model.update_last_active(uid)
+                last_active_str = str(last_active) if last_active else None
+                
+                if is_visible:
+                    self.broadcast_user_status(uid, "offline", last_active_str)
+                
+                logger.info(f"User {uid} disconnected - broadcast sent")
+            elif uid and not is_active_socket:
+                logger.info(f"User {uid} kicked (logged in elsewhere) - no offline broadcast")
+            
+            # Step 3: Cleanup - only remove from tracking if this is still the active socket
+            with self.lock:
+                if client_socket in self.clients:
                     del self.clients[client_socket]
-                    if uid in self.user_sockets: del self.user_sockets[uid]
-            client_socket.close()
+                # Only delete user_sockets and visibility if this is still the active socket
+                if uid and is_active_socket:
+                    if uid in self.user_sockets:
+                        del self.user_sockets[uid]
+                    if uid in self.user_visibility:
+                        del self.user_visibility[uid]
+            
+            try:
+                client_socket.close()
+            except:
+                pass
+
+    def handle_get_users(self, client_socket, uid):
+        users = self.model.get_all_users()
+        
+        # DEBUG: Print socket keys
+        print(f"[DEBUG handle_get_users] user_sockets keys: {list(self.user_sockets.keys())}")
+        
+        for user in users:
+            raw_user_id = user["user_id"]
+            user_id = int(raw_user_id) # Ensure int for validation
+            
+            is_connected = user_id in self.user_sockets
+            is_visible_ram = self.user_visibility.get(user_id, True)
+            
+            # DEBUG PRINT
+            print(f"[DEBUG] User {user_id}: connected={is_connected}, visible={is_visible_ram}")
+
+            if is_connected and is_visible_ram:
+                user["status"] = "online"
+            else:
+                user["status"] = "offline"
+                
+        self.send_to_client(client_socket, {"status": "success", "users": users})
+
+    def broadcast_user_status(self, user_id, status, last_active_at=None):
+        """Broadcast user status update to all clients except the user themselves."""
+        notification = {
+            "action": "user_status_update",
+            "user_id": user_id,
+            "status": status,
+            "last_active_at": last_active_at
+        }
+        with self.lock:
+            for uid, sock in self.user_sockets.items():
+                # Do not send to the user whose status is being updated if they are the one disconnecting
+                # or if the client should handle its own status update.
+                # The original code had `if uid != user_id:`, let's keep that logic.
+                if uid != user_id:
+                    self.send_to_client(sock, notification)
 
     def start(self):
         print(f"Server started on port {SERVER_CONFIG['port']}")
@@ -374,5 +562,6 @@ class ServerController:
             try:
                 client_sock, addr = self.server_socket.accept()
                 threading.Thread(target=self.handle_client, args=(client_sock,), daemon=True).start()
-            except:
+            except Exception as e:
+                logger.error(f"Server accept error: {e}")
                 break

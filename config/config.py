@@ -2,14 +2,14 @@
 
 GEMINI_API_KEY = "AIzaSyCbC_gKgN383w4MLX2SzqOsxGsGc_qyDQo"  # Thay thế bằng API Key của bạn
 DATABASE_CONFIG = {
-    "host": "192.168.110.253",
+    "host": "192.168.110.111",
     "user": "root",
     "password": "root",
     "database": "chat_app"
 }
 
 SERVER_CONFIG = {
-    "host": "192.168.110.253",  # IP chung
+    "host": "192.168.110.111",  # IP chung
     "port": 5001         # Port cho socket TCP
 }
 

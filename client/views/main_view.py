@@ -63,11 +63,27 @@ class ChatListItem(QtWidgets.QWidget):
             avatar_label.setText("👤")
             avatar_label.setStyleSheet("background-color: #ddd; border-radius: 20px;")
         layout.addWidget(avatar_label)
+
+        # Info Layout
         info_layout = QtWidgets.QVBoxLayout()
         info_layout.setSpacing(2)
+        
+        # Name Layout (Name + Status Dot)
+        name_layout = QtWidgets.QHBoxLayout()
+        name_layout.setSpacing(5)
+        
         name_label = QtWidgets.QLabel(display_name)
         name_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #2c3e50;")
-        info_layout.addWidget(name_label)
+        name_layout.addWidget(name_label)
+        
+        self.status_dot = QtWidgets.QLabel("●")
+        self.status_dot.setStyleSheet("color: #2ecc71; font-size: 10px;") # Green dot
+        self.status_dot.hide() # Default hidden
+        name_layout.addWidget(self.status_dot)
+        name_layout.addStretch()
+        
+        info_layout.addLayout(name_layout)
+
         last_msg_label = QtWidgets.QLabel(last_message if last_message else "Bắt đầu trò chuyện...")
         last_msg_label.setStyleSheet("font-size: 11px; color: #95a5a6;")
         last_msg_label.setWordWrap(False)
@@ -76,6 +92,12 @@ class ChatListItem(QtWidgets.QWidget):
         self.setLayout(layout)
         self.setStyleSheet(
             "ChatListItem { background-color: transparent; border-bottom: 1px solid #f0f0f0; } ChatListItem:hover { background-color: #f8f9fa; }")
+
+    def set_online(self, is_online):
+        if is_online:
+            self.status_dot.show()
+        else:
+            self.status_dot.hide()
 
 
 class VoiceMessageWidget(QtWidgets.QWidget):
@@ -325,7 +347,9 @@ class MainView(QtWidgets.QMainWindow):
     message_received = QtCore.Signal(str, str, str, int, int, str, bool)  # content, sender_name, message_type, target_id, sender_id, sender_avatar, is_system
     profile_updated_signal = QtCore.Signal(int, str)  # uid, name (không gửi avatar qua signal)
     new_group_signal = QtCore.Signal()
+    status_updated_signal = QtCore.Signal(int, str) # uid, status
     signal_received = QtCore.Signal(dict) # Tín hiệu mới cho các sự kiện P2P
+    force_logout_signal = QtCore.Signal(str)  # message - Tín hiệu bị đăng xuất từ thiết bị khác
 
     def __init__(self, app, controller, user_id, display_name):
         super().__init__()
@@ -336,6 +360,7 @@ class MainView(QtWidgets.QMainWindow):
         self.display_name = display_name
         self.current_mode = "user"
         self.ai_chat_window = None # Window AI Chat
+        self._message_check_running = True  # Flag to control message checking loop
 
         self.setWindowTitle("Python Chat App")
         self.resize(1100, 750)
@@ -394,14 +419,20 @@ class MainView(QtWidgets.QMainWindow):
         # KẾT NỐI TÍN HIỆU (RẤT QUAN TRỌNG ĐỂ KHÔNG BỊ CRASH)
         self.message_received.connect(self.display_incoming_message)
         self.profile_updated_signal.connect(self.handle_profile_update_ui)
+        self.status_updated_signal.connect(self.handle_status_update_ui)
         self.new_group_signal.connect(self.load_groups)
         self.signal_received.connect(self.on_signal_received) # Connect new signal
+        self.force_logout_signal.connect(self.handle_force_logout)  # Single Session Enforcement
 
         self.current_receiver_id = None
         self.current_receiver_name = None
         self.self_avatar = None
+        self.self_is_invisible = False
         self.user_avatars = {}
         self.user_names = {}  # Cache tên hiển thị của user
+        self.user_statuses = {} # Cache trạng thái online/offline
+        self.last_active_times = {} # Cache thời gian: user_id -> timestamp string
+        self.current_chat_id = None # user_id or group_id
         self.active_call_dialog = None # Theo dõi dialog cuộc gọi đang diễn ra
         self.incoming_dialog = None # Theo dõi dialog cuộc gọi đến
 
@@ -527,10 +558,24 @@ class MainView(QtWidgets.QMainWindow):
         self.chat_header.setFixedHeight(65)
         self.chat_header.setStyleSheet("background-color: white; border-bottom: 1px solid #ddd;")
         h_layout = QtWidgets.QHBoxLayout(self.chat_header)
+        h_layout.setContentsMargins(15, 5, 15, 5)
 
-        self.header_label = QtWidgets.QLabel("Chọn một người để chat")
-        self.header_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #2c3e50;")
-        h_layout.addWidget(self.header_label)
+        # Container cho Text (Name + Status)
+        text_container = QtWidgets.QWidget()
+        v_layout = QtWidgets.QVBoxLayout(text_container)
+        v_layout.setContentsMargins(0, 0, 0, 0)
+        v_layout.setSpacing(2)
+
+        self.header_name_label = QtWidgets.QLabel("Chọn một người để chat")
+        self.header_name_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #2c3e50;")
+        v_layout.addWidget(self.header_name_label)
+
+        self.header_status_label = QtWidgets.QLabel("")
+        self.header_status_label.setStyleSheet("font-size: 12px; color: #7f8c8d;")
+        self.header_status_label.hide() # Ẩn mặc định
+        v_layout.addWidget(self.header_status_label)
+
+        h_layout.addWidget(text_container)
         
         h_layout.addStretch()
         
@@ -673,7 +718,8 @@ class MainView(QtWidgets.QMainWindow):
         self.btn_ai_chat.setStyleSheet("background-color: transparent; border: none; font-size: 24px;")
         self.btn_add_group.hide()
         self.btn_add_group.hide()
-        self.header_label.setText("Chọn một người để chat")
+        self.header_name_label.setText("Chọn một người để chat")
+        self.header_status_label.hide()
         if hasattr(self, 'btn_call_header'): self.btn_call_header.hide()
         self.load_users()
 
@@ -687,8 +733,8 @@ class MainView(QtWidgets.QMainWindow):
         self.btn_ai_chat.setStyleSheet("background-color: transparent; border: none; font-size: 24px;")
         self.btn_add_group.show()
         self.btn_add_group.show()
-        self.header_label.setText("Chọn một nhóm để chat")
-        self.header_label.setText("Chọn một nhóm để chat")
+        self.header_name_label.setText("Chọn một nhóm để chat")
+        self.header_status_label.hide()
         if hasattr(self, 'btn_call_header'): self.btn_call_header.hide()
         if hasattr(self, 'btn_add_member'): self.btn_add_member.hide() # Ban đầu ẩn, chỉ hiện khi chọn
         if hasattr(self, 'btn_leave_group'): self.btn_leave_group.hide()
@@ -697,6 +743,7 @@ class MainView(QtWidgets.QMainWindow):
     def _clear_chat_ui(self):
         self.current_receiver_id = None
         self.current_receiver_name = None
+        self.current_chat_id = None
         if hasattr(self, 'typing_label'): self.typing_label.hide()
         # Xóa tin nhắn cũ
         for i in reversed(range(self.chat_messages_layout.count())):
@@ -742,9 +789,14 @@ class MainView(QtWidgets.QMainWindow):
             self.all_users = self.controller.get_users()
             self.user_avatars = {}
             self.user_names = {}
+            self.user_statuses = {}
+            self.last_active_times = {}
             for user in self.all_users:
-                self.user_avatars[user["user_id"]] = user.get("avatar")
-                self.user_names[user["user_id"]] = user.get("display_name")
+                uid = user["user_id"]
+                self.user_avatars[uid] = user.get("avatar")
+                self.user_names[uid] = user.get("display_name")
+                self.user_statuses[uid] = user.get("status", "offline")
+                self.last_active_times[uid] = user.get("last_active_at") # Store timestamp
             
             self.update_list_display(self.search_box.text())
         except Exception as e:
@@ -810,11 +862,10 @@ class MainView(QtWidgets.QMainWindow):
             # It uses `QtWidgets.QLabel(display_name)` -> We can setText with HTML.
             
             widget = ChatListItem(uid, display_name_html, last_msg, avatar, item_type=item_type)
-            # Need to ensure the label interprets HTML. 
-            # In ChatListItem.__init__, name_label is created.
-            # We can rely on QLabel auto-detecting HTML or set format.
-            # Let's modify ChatListItem class first if needed. 
-            # Thực ra, QLabel chuẩn tự động phát hiện HTML.
+            # Cập nhật trạng thái online nếu có trong cache
+            if item_type == "user":
+                 is_online = (self.user_statuses.get(uid) == "online")
+                 widget.set_online(is_online)
             
             widget.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
             widget.mousePressEvent = lambda e, u=uid, n=name: self.select_chat_by_id(u, n, item_type)
@@ -836,8 +887,19 @@ class MainView(QtWidgets.QMainWindow):
     def select_chat_by_id(self, target_id, display_name, item_type="user"):
         self.current_receiver_id = target_id
         self.current_receiver_name = display_name
+        self.current_chat_id = target_id # Set current chat ID
+        self.current_mode = item_type # Set current mode
+
         icon = "👥" if item_type == "group" else "💬"
-        self.header_label.setText(f"{icon} {display_name}")
+        self.header_name_label.setText(f"{icon} {display_name}")
+        
+        # Cập nhật trạng thái hiển thị trên Header (chỉ cho mode user)
+        if item_type == "user":
+            status = self.user_statuses.get(target_id, "offline")
+            self.update_header_status_display(target_id, status)
+        else:
+            self.header_status_label.hide()
+
 
         # Ẩn nút gọi cho logic nhóm
         if item_type == "group":
@@ -1190,8 +1252,6 @@ class MainView(QtWidgets.QMainWindow):
             # Current server relays signal with sender_id. 
             # If we are in a group, and one of the members sends a typing signal...
             # The signal mechanism in chat_mixin.py sends to 'receiver_id'. 
-            # If chatting in group, receiver_id is group_id?
-            # chat_mixin.send_typing_status(receiver_id, ...)
             # If it's a group, we are sending to the group_id?
             # Server handles signal relay by looking up 'target_id' in 'user_sockets'. 
             # Groups are NOT in user_sockets. 
@@ -1271,8 +1331,12 @@ class MainView(QtWidgets.QMainWindow):
 
     # === CÁC SLOT TÍN HIỆU AN TOÀN VỚI THREAD (THREAD-SAFE SIGNAL SLOTS) ===
     def check_incoming_messages(self):
-        while True:
+        while self._message_check_running:
             try:
+                # Check if controller is still running
+                if not self.controller or not self.controller.running:
+                    print("[DEBUG] Controller stopped, exiting message check loop")
+                    break
                 msg = self.controller.get_incoming_message(0.5)
                 if msg:
                     action = msg.get("action")
@@ -1293,6 +1357,24 @@ class MainView(QtWidgets.QMainWindow):
                     if action == "signal":
                         self.signal_received.emit(msg)
                         continue
+
+                    if action == "user_status_update":
+                        uid = msg.get("user_id")
+                        status = msg.get("status")
+                        last_active = msg.get("last_active_at")
+                        if uid is not None and status is not None:
+                            # Update cache directly here since we have last_active_at
+                            self.last_active_times[int(uid)] = last_active
+                            self.status_updated_signal.emit(int(uid), str(status))
+                        continue
+
+                    # === SINGLE SESSION ENFORCEMENT ===
+                    if action == "force_logout":
+                        print(f"[DEBUG] Received force_logout: {msg}")
+                        logout_message = msg.get("message", "Bạn đã bị đăng xuất.")
+                        self.force_logout_signal.emit(logout_message)
+                        print("[DEBUG] force_logout_signal emitted, breaking loop")
+                        break  # Thoát vòng lặp nghe tin
 
                     sender_id = msg.get('sender_id')
                     group_id = msg.get('group_id')
@@ -1335,8 +1417,43 @@ class MainView(QtWidgets.QMainWindow):
                         # Truyền cả sender_id và sender_avatar để hiển thị đúng
                         self.message_received.emit(content, sender_name, t, target_id_for_signal, sender_id, sender_avatar, is_system)
             except Exception as e:
-                print(f"Error checking messages: {e}")
+                if self._message_check_running:
+                    print(f"Error checking messages: {e}")
                 break
+        print("[DEBUG] Message check loop exited")
+
+    # === SINGLE SESSION ENFORCEMENT: Xử lý khi bị kick từ thiết bị khác ===
+    @QtCore.Slot(str)
+    def handle_force_logout(self, message):
+        """Xử lý khi tài khoản đăng nhập từ thiết bị khác."""
+        # Dừng các thread/timer
+        self._message_check_running = False
+        
+        # Hiển thị thông báo chặn màn hình
+        QtWidgets.QMessageBox.warning(
+            self,
+            "Phiên đăng nhập kết thúc",
+            message
+        )
+        
+        # Đóng socket và cleanup
+        if self.controller:
+            try:
+                self.controller.stop()
+            except:
+                pass
+        
+        # Close AI window if open
+        if self.ai_chat_window:
+            try:
+                self.ai_chat_window.close()
+            except:
+                pass
+            self.ai_chat_window = None
+        
+        # Quay về màn hình Login
+        self.app.show_login()
+        self.close()
 
     @QtCore.Slot(int, str)
     def handle_profile_update_ui(self, user_id, display_name):
@@ -1354,8 +1471,11 @@ class MainView(QtWidgets.QMainWindow):
             try:
                 users = self.controller.get_users()
                 for user in users:
-                    self.user_avatars[user["user_id"]] = user.get("avatar")
-                    self.user_names[user["user_id"]] = user.get("display_name")
+                    uid = user["user_id"]
+                    self.user_avatars[uid] = user.get("avatar")
+                    self.user_names[uid] = user.get("display_name")
+                    self.user_statuses[uid] = user.get("status", "offline")
+                    self.last_active_times[uid] = user.get("last_active_at") # Store timestamp
             except Exception as e:
                 print(f"Lỗi fetch users for cache: {e}")
 
@@ -1371,7 +1491,10 @@ class MainView(QtWidgets.QMainWindow):
             # 4. Cập nhật Header nếu đang chat với người đó
             if self.current_mode == "user" and self.current_receiver_id == user_id:
                 self.current_receiver_name = display_name
-                self.header_label.setText(f"💬 {display_name}")
+                self.header_name_label.setText(f"💬 {display_name}")
+                # Cập nhật lại trạng thái nếu đang hiển thị
+                status = self.user_statuses.get(user_id, "offline")
+                self.update_header_status_display(user_id, status)
 
             # 5. Cập nhật tin nhắn hiện có (Avatar & Tên)
             try:
@@ -1456,6 +1579,61 @@ class MainView(QtWidgets.QMainWindow):
         if self.current_receiver_id and self.current_receiver_name:
             self.select_chat_by_id(self.current_receiver_id, self.current_receiver_name, self.current_mode)
 
+    @QtCore.Slot(int, str)
+    def handle_status_update_ui(self, user_id, status):
+        # Cập nhật cache
+        self.user_statuses[user_id] = status
+        
+        # 1. Update List Items
+        # Duyệt qua danh sách bên trái để tìm item của user_id
+        for i in range(self.chat_list_layout.count()):
+            item = self.chat_list_layout.itemAt(i)
+            widget = item.widget()
+            if isinstance(widget, ChatListItem):
+                if widget.user_id == user_id:
+                     widget.set_online(status == "online")
+                     break # Found
+        
+        # 2. Update Header nếu đang chat với người đó
+        if self.current_mode == "user" and self.current_receiver_id == user_id:
+            self.update_header_status_display(user_id, status)
+
+    def update_header_status_display(self, user_id, status):
+        """Cập nhật nhãn trạng thái trên header chat."""
+        if status == "online":
+            self.header_status_label.setText("<span style='color: #2ecc71;'>● Đang hoạt động</span>")
+            self.header_status_label.show()
+        else:
+            last_active = self.last_active_times.get(user_id)
+            if last_active:
+                # Chuyển đổi timestamp string sang định dạng dễ đọc
+                try:
+                    # Giả định last_active là ISO format string (e.g., "2023-10-27T10:30:00.123456")
+                    from datetime import datetime
+                    dt_object = datetime.fromisoformat(last_active)
+                    now = datetime.now()
+                    diff = now - dt_object
+
+                    if diff.total_seconds() < 60:
+                        time_str = "vừa mới"
+                    elif diff.total_seconds() < 3600:
+                        minutes = int(diff.total_seconds() / 60)
+                        time_str = f"{minutes} phút trước"
+                    elif diff.total_seconds() < 86400:
+                        hours = int(diff.total_seconds() / 3600)
+                        time_str = f"{hours} giờ trước"
+                    else:
+                        time_str = dt_object.strftime("%H:%M %d/%m") # VD: 10:30 27/10
+                    
+                    self.header_status_label.setText(f"Hoạt động {time_str}")
+                    self.header_status_label.show()
+                except ValueError:
+                    self.header_status_label.setText("Offline")
+                    self.header_status_label.show()
+            else:
+                self.header_status_label.setText("Offline")
+                self.header_status_label.show()
+
     def display_incoming_message(self, message, sender_name, message_type, target_id, sender_id=None, sender_avatar=None, is_system=False):
         is_img = (message_type == 'image')
         is_voice = (message_type == 'voice')
@@ -1481,6 +1659,7 @@ class MainView(QtWidgets.QMainWindow):
             if resp.get('status') == 'success':
                 self.display_name = resp.get('display_name', self.display_name)
                 self.self_avatar = resp.get('avatar')
+                self.self_is_invisible = resp.get('is_invisible', False)
                 if self.self_avatar:
                     try:
                         pix = QtGui.QPixmap()
@@ -1603,7 +1782,7 @@ class MainView(QtWidgets.QMainWindow):
                 QtWidgets.QMessageBox.critical(self, "Lỗi", resp.get("message", "Lỗi rời nhóm"))
 
     def open_profile_dialog(self):
-        d = ProfileDialog(self.controller, self.display_name, self.self_avatar, self)
+        d = ProfileDialog(self.controller, self.display_name, self.self_avatar, self.self_is_invisible, self)
         if d.exec():
             # Lưu lại thông tin chat hiện tại
             saved_receiver_id = self.current_receiver_id
@@ -1677,15 +1856,26 @@ class MainView(QtWidgets.QMainWindow):
                                                QtWidgets.QMessageBox.StandardButton.No)
 
         if reply == QtWidgets.QMessageBox.StandardButton.Yes:
+            # Stop message check loop FIRST
+            self._message_check_running = False
+            
             # Close AI window if open
             if self.ai_chat_window:
                 self.ai_chat_window.close()
                 self.ai_chat_window = None
             
+            # Stop controller (this closes socket and stops receive thread)
             self.controller.stop()
+            
+            # Give threads time to exit
+            import time
+            time.sleep(0.3)
+            
             self.app.show_login()
             self.close()
 
     def closeEvent(self, event):
-        self.controller.stop()
+        self._message_check_running = False
+        if self.controller:
+            self.controller.stop()
         event.accept()

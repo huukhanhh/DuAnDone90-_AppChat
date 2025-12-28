@@ -1,126 +1,355 @@
-2025-12-12 12:04:17,540 - INFO - Database connection established
-2025-12-12 12:04:17,540 - INFO - UserModel initialized successfully
-2025-12-12 12:04:39,410 - INFO - New client session started
-2025-12-12 12:04:40,034 - INFO - User logged in: my@gmail.com
-2025-12-12 12:15:40,762 - INFO - Database connection established
-2025-12-12 12:15:40,763 - INFO - UserModel initialized successfully
-2025-12-12 13:44:48,206 - INFO - Database connection established
-2025-12-12 13:44:48,206 - INFO - UserModel initialized successfully
-2025-12-12 13:44:57,532 - INFO - New client session started
-2025-12-12 13:44:58,174 - INFO - User logged in: my@gmail.com
-2025-12-12 13:45:30,486 - INFO - New client session started
-2025-12-12 14:12:14,254 - INFO - Database connection established
-2025-12-12 14:12:14,254 - INFO - UserModel initialized successfully
-2025-12-12 14:12:40,943 - INFO - New client session started
-2025-12-12 14:12:41,591 - INFO - User logged in: my@gmail.com
-2025-12-12 14:13:36,465 - INFO - New client session started
-2025-12-12 14:20:51,738 - INFO - Database connection established
-2025-12-12 14:20:51,738 - INFO - UserModel initialized successfully
-2025-12-12 14:21:04,524 - INFO - New client session started
-2025-12-12 14:21:05,181 - INFO - User logged in: my@gmail.com
-2025-12-12 14:24:45,701 - INFO - New client session started
-2025-12-12 14:24:46,375 - INFO - User logged in: huuhoan@gmail.com
-2025-12-12 14:25:46,202 - INFO - New client session started
-2025-12-12 14:25:46,866 - INFO - User logged in: bo@gmail.com
-2025-12-12 14:31:35,107 - INFO - Database connection established
-2025-12-12 14:31:35,108 - INFO - UserModel initialized successfully
-2025-12-12 14:31:50,369 - INFO - Database connection established
-2025-12-12 14:31:50,369 - INFO - UserModel initialized successfully
-2025-12-12 14:32:02,120 - INFO - New client session started
-2025-12-12 14:32:02,802 - INFO - User logged in: my@gmail.com
-2025-12-12 14:34:17,360 - INFO - New client session started
-2025-12-12 14:34:18,028 - INFO - User logged in: huuhoan@gmail.com
-2025-12-12 14:34:47,470 - ERROR - Server Loop Error: 2014 (HY000): Commands out of sync; you can't run this command now
-2025-12-12 14:34:47,472 - INFO - New client session started
-2025-12-12 14:35:33,544 - DEBUG - Message saved: 5 -> 7 (CallLog: False)
-2025-12-12 14:38:23,653 - INFO - New client session started
-2025-12-12 14:38:25,068 - INFO - New client session started
-2025-12-12 14:41:27,418 - INFO - Database connection established
-2025-12-12 14:41:27,419 - INFO - UserModel initialized successfully
-2025-12-12 14:41:42,832 - INFO - New client session started
-2025-12-12 14:41:43,530 - INFO - User logged in: my@gmail.com
-2025-12-12 14:42:14,052 - INFO - New client session started
-2025-12-12 14:56:56,271 - INFO - Database connection established
-2025-12-12 14:56:56,271 - INFO - UserModel initialized successfully
-2025-12-12 14:57:13,061 - INFO - New client session started
-2025-12-12 14:57:13,269 - INFO - User logged in: my@gmail.com
-2025-12-12 14:57:45,906 - INFO - New client session started
-2025-12-13 10:34:01,479 - INFO - Database connection established
-2025-12-13 10:34:01,480 - INFO - UserModel initialized successfully
-2025-12-13 10:34:21,979 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
-2025-12-13 10:34:22,235 - INFO - User logged in: my@gmail.com
-2025-12-13 10:34:29,785 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
-2025-12-13 10:36:12,777 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
-2025-12-13 10:36:13,134 - INFO - User logged in: my@gmail.com
-2025-12-13 10:48:29,143 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
-2025-12-13 10:58:29,145 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
-2025-12-13 11:00:03,890 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
-2025-12-13 12:23:55,922 - INFO - Database connection established
-2025-12-13 12:23:55,923 - INFO - UserModel initialized successfully
-2025-12-13 12:39:00,081 - INFO - Database connection established
-2025-12-13 12:39:00,081 - INFO - UserModel initialized successfully
-2025-12-13 12:55:27,880 - INFO - Database connection established
-2025-12-13 12:55:27,881 - INFO - UserModel initialized successfully
-2025-12-13 12:56:37,656 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
-2025-12-13 12:56:38,346 - INFO - User logged in: my@gmail.com
-2025-12-13 12:57:52,001 - INFO - Database connection established
-2025-12-13 12:57:52,001 - INFO - UserModel initialized successfully
-2025-12-13 12:58:03,468 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
-2025-12-13 12:58:04,050 - INFO - User logged in: my@gmail.com
-2025-12-13 12:58:49,201 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
-2025-12-13 12:58:49,811 - INFO - User logged in: bo@gmail.com
-2025-12-13 13:04:24,522 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
-2025-12-13 13:04:26,976 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
-2025-12-13 13:04:34,701 - INFO - Database connection established
-2025-12-13 13:04:34,701 - INFO - UserModel initialized successfully
-2025-12-13 13:04:45,196 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
-2025-12-13 13:04:45,836 - INFO - User logged in: my@gmail.com
-2025-12-13 13:08:00,894 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
-2025-12-13 13:09:58,903 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
-2025-12-13 13:10:32,230 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
-2025-12-13 13:16:29,722 - INFO - Database connection established
-2025-12-13 13:16:29,722 - INFO - UserModel initialized successfully
-2025-12-13 13:21:24,676 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
-2025-12-13 13:21:43,516 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
-2025-12-13 13:26:01,400 - ERROR - Database connection failed: 1130 (HY000): Host 'LAPTOP-NLHNIO5G' is not allowed to connect to this MySQL server
-2025-12-13 13:26:01,400 - ERROR - Cannot initialize model/controllers: 1130 (HY000): Host 'LAPTOP-NLHNIO5G' is not allowed to connect to this MySQL server
-2025-12-13 13:26:01,422 - INFO - Database connection closed
-2025-12-13 13:28:37,292 - INFO - Database connection established
-2025-12-13 13:28:37,293 - INFO - UserModel initialized successfully
-2025-12-13 13:38:00,273 - INFO - Database connection established
-2025-12-13 13:38:00,273 - INFO - UserModel initialized successfully
-2025-12-13 13:46:24,186 - INFO - Database connection established
-2025-12-13 13:46:24,186 - INFO - UserModel initialized successfully
-2025-12-13 13:48:43,718 - INFO - Database connection established
-2025-12-13 13:48:43,718 - INFO - UserModel initialized successfully
-2025-12-13 13:55:37,282 - INFO - Database connection established
-2025-12-13 13:55:37,282 - INFO - UserModel initialized successfully
-2025-12-13 13:58:24,060 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
-2025-12-13 14:12:04,245 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
-2025-12-13 14:12:19,980 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
-2025-12-13 14:12:20,383 - INFO - User logged in: huuhoan@gmail.com
-2025-12-13 14:13:44,579 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
-2025-12-13 14:13:45,202 - INFO - User logged in: my@gmail.com
-2025-12-13 14:14:06,418 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
-2025-12-13 14:14:07,040 - INFO - User logged in: bo@gmail.com
-2025-12-13 14:17:26,370 - DEBUG - Message saved: 7 -> 5 (CallLog: True)
-2025-12-13 14:19:15,387 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
-2025-12-13 14:19:19,296 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
-2025-12-19 21:09:10,981 - INFO - Database connection established
-2025-12-19 21:09:10,981 - INFO - UserModel initialized successfully
-2025-12-19 21:36:17,006 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
-2025-12-19 21:36:17,905 - INFO - User logged in: my@gmail.com
-2025-12-19 21:37:27,975 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
-2025-12-19 21:37:28,606 - INFO - User logged in: bo@gmail.com
-2025-12-19 21:38:33,104 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
-2025-12-19 21:38:34,277 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
-2025-12-19 21:52:28,685 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
-2025-12-19 21:52:29,415 - INFO - User logged in: bo@gmail.com
-2025-12-19 21:52:36,539 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
-2025-12-19 21:52:37,257 - INFO - User logged in: my@gmail.com
-2025-12-19 21:52:46,188 - DEBUG - Message saved: 6 -> 5 (CallLog: False)
-2025-12-19 21:52:51,731 - DEBUG - Message saved: 5 -> 6 (CallLog: False)
-2025-12-19 21:53:11,204 - DEBUG - Message saved: 6 -> 5 (CallLog: False)
-2025-12-19 21:53:23,592 - DEBUG - Message saved: 5 -> 6 (CallLog: False)
-2025-12-19 22:06:15,448 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
-2025-12-19 22:12:11,882 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:01:55,060 - INFO - Database connection established
+2025-12-22 02:01:55,060 - INFO - UserModel initialized successfully
+2025-12-22 02:02:02,473 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:02:02,696 - INFO - User logged in: my@gmail.com
+2025-12-22 02:02:14,118 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:02:14,344 - INFO - User logged in: huuhoan@gmail.com
+2025-12-22 02:04:15,533 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:04:43,409 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:06:01,377 - INFO - Database connection established
+2025-12-22 02:06:01,377 - INFO - UserModel initialized successfully
+2025-12-22 02:06:11,042 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:06:11,260 - INFO - User logged in: my@gmail.com
+2025-12-22 02:06:26,397 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:06:26,613 - INFO - User logged in: huuhoan@gmail.com
+2025-12-22 02:07:01,125 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:07:01,372 - INFO - User logged in: huuhoan@gmail.com
+2025-12-22 02:07:06,138 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:07:08,609 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:07:08,825 - INFO - User logged in: huuhoan@gmail.com
+2025-12-22 02:07:13,626 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:07:13,632 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:07:13,846 - INFO - User logged in: huuhoan@gmail.com
+2025-12-22 02:07:18,637 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:07:18,639 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:07:18,843 - INFO - User logged in: huuhoan@gmail.com
+2025-12-22 02:07:23,646 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:07:23,647 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:07:23,871 - INFO - User logged in: huuhoan@gmail.com
+2025-12-22 02:07:28,651 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:07:28,655 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:07:28,876 - INFO - User logged in: huuhoan@gmail.com
+2025-12-22 02:07:33,673 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:12:58,545 - INFO - Database connection established
+2025-12-22 02:12:58,545 - INFO - UserModel initialized successfully
+2025-12-22 02:13:06,844 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:13:07,057 - INFO - User logged in: my@gmail.com
+2025-12-22 02:13:19,420 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:13:19,655 - INFO - User logged in: huuhoan@gmail.com
+2025-12-22 02:13:43,437 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:13:56,034 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:13:56,238 - INFO - User logged in: huuhoan@gmail.com
+2025-12-22 02:14:01,044 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:14:04,193 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:14:04,402 - INFO - User logged in: huuhoan@gmail.com
+2025-12-22 02:14:09,210 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:15:23,811 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:15:24,027 - INFO - User logged in: bo@gmail.com
+2025-12-22 02:15:28,817 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:20:21,992 - INFO - Database connection established
+2025-12-22 02:20:21,993 - INFO - UserModel initialized successfully
+2025-12-22 02:20:28,700 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:20:28,936 - INFO - User logged in: my@gmail.com
+2025-12-22 02:20:50,928 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:20:51,140 - INFO - User logged in: huuhoan@gmail.com
+2025-12-22 02:21:01,565 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:21:10,337 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:21:10,544 - INFO - User logged in: huuhoan@gmail.com
+2025-12-22 02:21:15,345 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:22:40,993 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:25:14,649 - INFO - Database connection established
+2025-12-22 02:25:14,650 - INFO - UserModel initialized successfully
+2025-12-22 02:25:23,016 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:25:23,227 - INFO - User logged in: my@gmail.com
+2025-12-22 02:25:34,943 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:25:35,159 - INFO - User logged in: huuhoan@gmail.com
+2025-12-22 02:25:39,788 - DEBUG - Message saved: 7 -> 5 (CallLog: False)
+2025-12-22 02:25:49,815 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:26:04,050 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:26:04,276 - INFO - User logged in: huuhoan@gmail.com
+2025-12-22 02:26:09,067 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:26:09,074 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:26:09,321 - INFO - User logged in: huuhoan@gmail.com
+2025-12-22 02:26:14,113 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:28:12,498 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:28:32,707 - INFO - Database connection established
+2025-12-22 02:28:32,707 - INFO - UserModel initialized successfully
+2025-12-22 02:28:57,833 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:28:58,038 - INFO - User logged in: my@gmail.com
+2025-12-22 02:29:04,128 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:29:04,343 - INFO - User logged in: huuhoan@gmail.com
+2025-12-22 02:29:17,520 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:29:24,529 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:29:24,759 - INFO - User logged in: huuhoan@gmail.com
+2025-12-22 02:29:29,565 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:29:29,578 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:29:29,791 - INFO - User logged in: huuhoan@gmail.com
+2025-12-22 02:29:34,588 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:29:34,589 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:29:34,792 - INFO - User logged in: huuhoan@gmail.com
+2025-12-22 02:29:39,605 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:29:39,608 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:29:39,820 - INFO - User logged in: huuhoan@gmail.com
+2025-12-22 02:29:44,619 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:29:44,627 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:29:45,049 - INFO - User logged in: huuhoan@gmail.com
+2025-12-22 02:29:49,648 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:29:49,651 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:29:50,092 - INFO - User logged in: huuhoan@gmail.com
+2025-12-22 02:29:54,661 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:31:17,161 - INFO - Database connection established
+2025-12-22 02:31:17,161 - INFO - UserModel initialized successfully
+2025-12-22 02:31:26,265 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:31:26,493 - INFO - User logged in: my@gmail.com
+2025-12-22 02:31:39,460 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:31:39,671 - INFO - User logged in: huuhoan@gmail.com
+2025-12-22 02:32:00,846 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:32:14,663 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:32:14,877 - INFO - User logged in: huuhoan@gmail.com
+2025-12-22 02:32:19,672 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:32:21,190 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:32:21,393 - INFO - User logged in: huuhoan@gmail.com
+2025-12-22 02:32:26,200 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:32:27,708 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:32:27,923 - INFO - User logged in: huuhoan@gmail.com
+2025-12-22 02:32:32,724 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:32:34,232 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:32:34,443 - INFO - User logged in: huuhoan@gmail.com
+2025-12-22 02:32:39,247 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-22 02:33:11,816 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 14:37:07,455 - INFO - Database connection established
+2025-12-25 14:37:07,455 - INFO - UserModel initialized successfully
+2025-12-25 14:37:34,746 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 14:37:35,401 - INFO - User logged in: my@gmail.com
+2025-12-25 14:38:15,311 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 14:38:15,945 - INFO - User logged in: bo@gmail.com
+2025-12-25 14:38:30,804 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 14:38:56,787 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 14:38:57,415 - INFO - User logged in: bo@gmail.com
+2025-12-25 14:39:01,806 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 14:51:50,301 - INFO - Database connection established
+2025-12-25 14:51:50,302 - INFO - UserModel initialized successfully
+2025-12-25 14:52:02,298 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 14:52:02,925 - INFO - User logged in: my@gmail.com
+2025-12-25 14:52:21,630 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 14:52:22,259 - INFO - User logged in: bo@gmail.com
+2025-12-25 14:52:45,936 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 14:53:06,110 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 14:53:06,752 - INFO - User logged in: bo@gmail.com
+2025-12-25 14:53:11,136 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 14:53:53,474 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 14:56:37,940 - INFO - Database connection established
+2025-12-25 14:56:37,940 - INFO - UserModel initialized successfully
+2025-12-25 14:56:52,581 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 14:56:53,307 - INFO - User logged in: my@gmail.com
+2025-12-25 14:57:08,496 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 14:57:09,168 - INFO - User logged in: bo@gmail.com
+2025-12-25 14:57:23,867 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 14:57:23,868 - INFO - Resume session success for User 6. Sockets: [5, 6]
+2025-12-25 14:57:23,873 - INFO - User 6 disconnected - broadcast sent
+2025-12-25 14:57:25,689 - INFO - User 6 disconnected - broadcast sent
+2025-12-25 14:57:40,661 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 14:57:41,351 - INFO - User logged in: bo@gmail.com
+2025-12-25 14:57:46,106 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 14:57:46,106 - INFO - Resume session success for User 6. Sockets: [5, 6]
+2025-12-25 14:57:46,110 - INFO - User 6 disconnected - broadcast sent
+2025-12-25 14:57:47,914 - INFO - User 6 disconnected - broadcast sent
+2025-12-25 14:57:55,832 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 14:57:56,495 - INFO - User logged in: my@gmail.com
+2025-12-25 14:58:02,875 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 14:58:02,875 - INFO - Resume session success for User 5. Sockets: [5]
+2025-12-25 14:58:02,881 - INFO - User 5 disconnected - broadcast sent
+2025-12-25 14:58:04,641 - INFO - User 5 disconnected - broadcast sent
+2025-12-25 14:58:05,700 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 14:58:05,701 - INFO - Resume session success for User 5. Sockets: [5]
+2025-12-25 14:58:05,705 - INFO - User 5 disconnected - broadcast sent
+2025-12-25 14:58:07,472 - INFO - User 5 disconnected - broadcast sent
+2025-12-25 15:08:24,621 - INFO - Database connection established
+2025-12-25 15:08:24,621 - INFO - UserModel initialized successfully
+2025-12-25 15:08:36,192 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 15:08:36,854 - INFO - User logged in: my@gmail.com
+2025-12-25 15:08:49,020 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 15:08:49,685 - INFO - User logged in: bo@gmail.com
+2025-12-25 15:09:02,299 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 15:09:02,946 - INFO - User logged in: my@gmail.com
+2025-12-25 15:09:02,946 - INFO - Sent force_logout to old session of user 5
+2025-12-25 15:09:02,947 - INFO - Kicked old session of user 5
+2025-12-25 15:09:02,955 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 15:09:02,956 - INFO - Resume session success for User 5. Sockets: [6, 5]
+2025-12-25 15:09:09,516 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 15:09:09,516 - INFO - Resume session success for User 5. Sockets: [6, 5]
+2025-12-25 15:09:09,522 - INFO - User 5 disconnected - broadcast sent
+2025-12-25 15:09:11,038 - INFO - User 5 disconnected - broadcast sent
+2025-12-25 15:09:22,482 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 15:09:23,144 - INFO - User logged in: my@gmail.com
+2025-12-25 15:09:37,387 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 15:09:37,388 - INFO - Resume session success for User 5. Sockets: [6, 5]
+2025-12-25 15:09:37,392 - INFO - User 5 disconnected - broadcast sent
+2025-12-25 15:09:39,119 - INFO - User 5 disconnected - broadcast sent
+2025-12-25 15:09:40,100 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 15:09:40,101 - INFO - Resume session success for User 6. Sockets: [6]
+2025-12-25 15:09:40,104 - INFO - User 6 disconnected - broadcast sent
+2025-12-25 15:09:41,831 - INFO - User 6 disconnected - broadcast sent
+2025-12-25 15:09:42,851 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 15:09:42,851 - INFO - Resume session success for User 5. Sockets: [5]
+2025-12-25 15:09:42,857 - INFO - User 5 disconnected - broadcast sent
+2025-12-25 15:09:44,747 - INFO - User 5 disconnected - broadcast sent
+2025-12-25 15:09:56,259 - INFO - Database connection established
+2025-12-25 15:09:56,260 - INFO - UserModel initialized successfully
+2025-12-25 15:10:07,503 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 15:10:08,163 - INFO - User logged in: my@gmail.com
+2025-12-25 15:10:20,957 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 15:10:21,612 - INFO - User logged in: my@gmail.com
+2025-12-25 15:10:21,613 - INFO - Sent force_logout to old session of user 5
+2025-12-25 15:10:21,613 - INFO - Kicked old session of user 5
+2025-12-25 15:10:21,619 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 15:10:21,621 - INFO - Resume session success for User 5. Sockets: [5]
+2025-12-25 15:10:24,773 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 15:10:24,773 - INFO - Resume session success for User 5. Sockets: [5]
+2025-12-25 15:10:24,778 - INFO - User 5 disconnected - broadcast sent
+2025-12-25 15:10:26,291 - INFO - User 5 disconnected - broadcast sent
+2025-12-25 15:10:31,916 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 15:10:31,917 - INFO - Resume session success for User 5. Sockets: [5]
+2025-12-25 15:10:31,921 - INFO - User 5 disconnected - broadcast sent
+2025-12-25 15:10:33,683 - INFO - User 5 disconnected - broadcast sent
+2025-12-25 15:17:41,400 - INFO - Database connection established
+2025-12-25 15:17:41,400 - INFO - UserModel initialized successfully
+2025-12-25 15:17:53,045 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 15:17:53,725 - INFO - User logged in: my@gmail.com
+2025-12-25 15:18:08,683 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 15:18:09,347 - INFO - User logged in: my@gmail.com
+2025-12-25 15:18:09,348 - INFO - Sent force_logout to old session of user 5
+2025-12-25 15:18:09,349 - INFO - Kicked old session of user 5
+2025-12-25 15:18:09,380 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 15:18:09,382 - INFO - Resume session success for User 5. Sockets: [5]
+2025-12-25 15:18:13,033 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 15:18:13,033 - INFO - Resume session success for User 5. Sockets: [5]
+2025-12-25 15:18:13,038 - INFO - User 5 disconnected - broadcast sent
+2025-12-25 15:18:14,545 - INFO - User 5 kicked (logged in elsewhere) - no offline broadcast
+2025-12-25 15:18:19,298 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 15:18:19,966 - INFO - User logged in: my@gmail.com
+2025-12-25 15:18:31,698 - INFO - User 5 kicked (logged in elsewhere) - no offline broadcast
+2025-12-25 15:18:31,700 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 15:18:31,701 - INFO - Resume session success for User 5. Sockets: [5]
+2025-12-25 15:18:32,345 - INFO - User 5 kicked (logged in elsewhere) - no offline broadcast
+2025-12-25 15:18:32,348 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 15:18:32,348 - INFO - Resume session success for User 5. Sockets: [5]
+2025-12-25 15:18:33,415 - INFO - User 5 kicked (logged in elsewhere) - no offline broadcast
+2025-12-25 15:18:34,150 - INFO - User 5 disconnected - broadcast sent
+2025-12-25 15:20:38,727 - INFO - Database connection established
+2025-12-25 15:20:38,728 - INFO - UserModel initialized successfully
+2025-12-25 15:20:50,588 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 15:20:51,259 - INFO - User logged in: my@gmail.com
+2025-12-25 15:21:03,715 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 15:21:04,371 - INFO - User logged in: my@gmail.com
+2025-12-25 15:21:04,372 - INFO - Sent force_logout to old session of user 5
+2025-12-25 15:21:04,372 - INFO - Kicked old session of user 5
+2025-12-25 15:21:04,384 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 15:21:04,384 - INFO - Resume session success for User 5. Sockets: [5]
+2025-12-25 15:21:07,205 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 15:21:07,206 - INFO - Resume session success for User 5. Sockets: [5]
+2025-12-25 15:21:07,211 - INFO - User 5 disconnected - broadcast sent
+2025-12-25 15:21:08,717 - INFO - User 5 kicked (logged in elsewhere) - no offline broadcast
+2025-12-25 15:21:19,421 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 15:21:20,068 - INFO - User logged in: my@gmail.com
+2025-12-25 15:21:23,218 - INFO - User 5 kicked (logged in elsewhere) - no offline broadcast
+2025-12-25 15:21:23,221 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 15:21:23,221 - INFO - Resume session success for User 5. Sockets: [5]
+2025-12-25 15:21:24,947 - INFO - User 5 disconnected - broadcast sent
+2025-12-25 15:21:27,080 - INFO - User 5 kicked (logged in elsewhere) - no offline broadcast
+2025-12-25 15:21:27,083 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 15:21:27,083 - INFO - Resume session success for User 5. Sockets: [5]
+2025-12-25 15:21:28,842 - INFO - User 5 disconnected - broadcast sent
+2025-12-25 15:24:41,583 - INFO - Database connection established
+2025-12-25 15:24:41,584 - INFO - UserModel initialized successfully
+2025-12-25 15:24:53,087 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 15:24:53,735 - INFO - User logged in: my@gmail.com
+2025-12-25 15:25:21,010 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 15:25:21,690 - INFO - User logged in: my@gmail.com
+2025-12-25 15:25:21,694 - INFO - Sent force_logout to old session of user 5
+2025-12-25 15:25:21,695 - INFO - Kicked old session of user 5
+2025-12-25 15:25:21,724 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 15:25:21,725 - INFO - Resume session success for User 5. Sockets: [5]
+2025-12-25 15:25:24,742 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 15:25:24,742 - INFO - Resume session success for User 5. Sockets: [5]
+2025-12-25 15:25:24,746 - INFO - User 5 disconnected - broadcast sent
+2025-12-25 15:25:26,254 - INFO - User 5 kicked (logged in elsewhere) - no offline broadcast
+2025-12-25 15:25:33,923 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-25 15:25:34,569 - INFO - User logged in: my@gmail.com
+2025-12-28 17:55:31,360 - INFO - Database connection established
+2025-12-28 17:55:31,361 - INFO - UserModel initialized successfully
+2025-12-28 17:55:58,839 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-28 17:55:59,555 - INFO - User logged in: my@gmail.com
+2025-12-28 17:56:44,611 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-28 17:56:45,265 - INFO - User logged in: bo@gmail.com
+2025-12-28 17:56:56,634 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-28 17:56:56,634 - INFO - Resume session success for User 6. Sockets: [5, 6]
+2025-12-28 17:56:56,639 - INFO - User 6 disconnected - broadcast sent
+2025-12-28 17:56:58,437 - INFO - User 6 kicked (logged in elsewhere) - no offline broadcast
+2025-12-28 17:57:11,745 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-28 17:57:12,411 - INFO - User logged in: bo@gmail.com
+2025-12-28 17:57:32,909 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-28 17:57:32,909 - INFO - Resume session success for User 6. Sockets: [5, 6]
+2025-12-28 17:57:32,914 - INFO - User 6 disconnected - broadcast sent
+2025-12-28 17:57:34,712 - INFO - User 6 kicked (logged in elsewhere) - no offline broadcast
+2025-12-28 17:58:03,082 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-28 17:58:03,732 - INFO - User logged in: my@gmail.com
+2025-12-28 17:58:03,734 - INFO - Sent force_logout to old session of user 5
+2025-12-28 17:58:03,734 - INFO - Kicked old session of user 5
+2025-12-28 17:58:03,846 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-28 17:58:03,846 - INFO - Resume session success for User 5. Sockets: [5]
+2025-12-28 17:58:08,394 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-28 17:58:08,395 - INFO - Resume session success for User 5. Sockets: [5]
+2025-12-28 17:58:08,400 - INFO - User 5 disconnected - broadcast sent
+2025-12-28 17:58:09,896 - INFO - User 5 kicked (logged in elsewhere) - no offline broadcast
+2025-12-28 17:58:48,681 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-28 17:58:49,334 - INFO - User logged in: my@gmail.com
+2025-12-28 17:58:58,233 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-28 17:58:58,234 - INFO - Resume session success for User 5. Sockets: [5]
+2025-12-28 17:58:58,239 - INFO - User 5 disconnected - broadcast sent
+2025-12-28 17:58:59,568 - INFO - User 5 kicked (logged in elsewhere) - no offline broadcast
+2025-12-28 17:58:59,570 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-28 17:58:59,570 - INFO - Resume session success for User 5. Sockets: [5]
+2025-12-28 17:58:59,961 - INFO - User 5 kicked (logged in elsewhere) - no offline broadcast
+2025-12-28 17:59:01,373 - INFO - User 5 disconnected - broadcast sent
+2025-12-28 17:59:52,227 - INFO - Database connection established
+2025-12-28 17:59:52,227 - INFO - UserModel initialized successfully
+2025-12-28 18:00:06,407 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-28 18:00:07,062 - INFO - User logged in: my@gmail.com
+2025-12-28 18:00:22,492 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-28 18:00:23,190 - INFO - User logged in: my@gmail.com
+2025-12-28 18:00:23,192 - INFO - Sent force_logout to old session of user 5
+2025-12-28 18:00:23,192 - INFO - Kicked old session of user 5
+2025-12-28 18:00:23,220 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-28 18:00:23,220 - INFO - Resume session success for User 5. Sockets: [5]
+2025-12-28 18:00:26,875 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-28 18:00:26,875 - INFO - Resume session success for User 5. Sockets: [5]
+2025-12-28 18:00:26,881 - INFO - User 5 disconnected - broadcast sent
+2025-12-28 18:00:28,389 - INFO - User 5 kicked (logged in elsewhere) - no offline broadcast
+2025-12-28 18:00:36,282 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-28 18:00:36,934 - INFO - User logged in: my@gmail.com
+2025-12-28 18:00:43,914 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-28 18:00:43,915 - INFO - Resume session success for User 5. Sockets: [5]
+2025-12-28 18:00:43,919 - INFO - User 5 disconnected - broadcast sent
+2025-12-28 18:00:45,673 - INFO - User 5 kicked (logged in elsewhere) - no offline broadcast
+2025-12-28 18:00:46,321 - INFO - User 5 kicked (logged in elsewhere) - no offline broadcast
+2025-12-28 18:00:46,323 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-28 18:00:46,323 - INFO - Resume session success for User 5. Sockets: [5]
+2025-12-28 18:00:48,152 - INFO - User 5 disconnected - broadcast sent
+2025-12-28 18:05:49,374 - INFO - Database connection established
+2025-12-28 18:05:49,374 - INFO - UserModel initialized successfully
+2025-12-28 18:05:56,987 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-28 18:05:57,211 - INFO - User logged in: my@gmail.com
+2025-12-28 18:06:06,041 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-28 18:06:06,262 - INFO - User logged in: my@gmail.com
+2025-12-28 18:06:06,262 - INFO - Sent force_logout to old session of user 5
+2025-12-28 18:06:06,262 - INFO - Kicked old session of user 5
+2025-12-28 18:06:14,432 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-28 18:06:14,668 - INFO - User logged in: my@gmail.com
+2025-12-28 18:06:14,669 - INFO - Sent force_logout to old session of user 5
+2025-12-28 18:06:14,669 - INFO - Kicked old session of user 5
+2025-12-28 18:06:23,273 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-28 18:06:23,500 - INFO - User logged in: my@gmail.com
+2025-12-28 18:06:23,500 - INFO - Sent force_logout to old session of user 5
+2025-12-28 18:06:23,500 - INFO - Kicked old session of user 5
+2025-12-28 18:06:26,356 - INFO - User 5 disconnected - broadcast sent

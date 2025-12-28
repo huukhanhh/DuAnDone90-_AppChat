@@ -49,10 +49,15 @@ class UserModel:
 
     def get_all_users(self):
         try:
-            query = "SELECT id, display_name, avatar_data FROM users"
+            query = "SELECT id, display_name, avatar_data, last_active_at FROM users"
             self.cursor.execute(query)
             return [
-                {"user_id": row[0], "display_name": row[1], "avatar": row[2]}
+                {
+                    "user_id": row[0], 
+                    "display_name": row[1], 
+                    "avatar": row[2],
+                    "last_active_at": str(row[3]) if row[3] else None
+                }
                 for row in self.cursor.fetchall()
             ]
         except mysql.connector.Error as err:
@@ -84,16 +89,23 @@ class UserModel:
 
     def login_user(self, email, password):
         try:
-            query = "SELECT id, display_name, password_hash, avatar_data FROM users WHERE email = %s"
+            query = "SELECT id, display_name, password_hash, avatar_data, is_invisible FROM users WHERE email = %s"
             self.cursor.execute(query, (email,))
             result = self.cursor.fetchone()
 
             if result:
-                user_id, display_name, password_hash, avatar_data = result
+                user_id, display_name, password_hash, avatar_data, is_invisible = result
                 try:
                     if bcrypt.checkpw(password.encode('utf-8'), password_hash.encode('utf-8')):
                         logger.info(f"User logged in: {email}")
-                        return {"status": "success", "user_id": user_id, "display_name": display_name, "avatar": avatar_data}
+                        return {
+                            "status": "success", 
+                            "user_id": user_id, 
+                            "display_name": display_name, 
+                            "avatar": avatar_data,
+                            "is_invisible": bool(is_invisible),
+                            "last_active_at": None # Login implies active now
+                        }
                     else:
                         return {"status": "error", "message": "Mật khẩu sai"}
                 except ValueError as e:
@@ -224,7 +236,7 @@ class UserModel:
 
     def get_profile(self, user_id):
         try:
-            query = "SELECT display_name, email, avatar_data FROM users WHERE id = %s"
+            query = "SELECT display_name, email, avatar_data, is_invisible, last_active_at FROM users WHERE id = %s"
             self.cursor.execute(query, (user_id,))
             result = self.cursor.fetchone()
             if not result:
@@ -233,32 +245,42 @@ class UserModel:
                 "status": "success",
                 "display_name": result[0],
                 "email": result[1],
-                "avatar": result[2]
+                "avatar": result[2],
+                "is_invisible": bool(result[3]),
+                "last_active_at": str(result[4]) if len(result) > 4 and result[4] else None
             }
         except mysql.connector.Error as err:
             logger.error(f"Error getting profile: {err}")
             return {"status": "error", "message": f"Lỗi database: {err}"}
 
-    def update_profile(self, user_id, display_name=None, avatar_data=None):
+
+    def update_profile(self, user_id, display_name=None, avatar_data=None, is_invisible=None):
         try:
-            fields = []
-            values = []
-            if display_name is not None:
-                fields.append("display_name = %s")
-                values.append(display_name)
-            if avatar_data is not None:
-                fields.append("avatar_data = %s")
-                values.append(avatar_data)
-            if not fields:
-                return {"status": "error", "message": "Không có dữ liệu cập nhật"}
-            values.append(user_id)
-            query = f"UPDATE users SET {', '.join(fields)} WHERE id = %s"
-            self.cursor.execute(query, tuple(values))
+            updates = []
+            params = []
+            if display_name:
+                updates.append("display_name = %s")
+                params.append(display_name)
+            if avatar_data:
+                updates.append("avatar_data = %s")
+                params.append(avatar_data)
+            if is_invisible is not None:
+                updates.append("is_invisible = %s")
+                params.append(1 if is_invisible else 0)
+
+            if not updates:
+                return {"status": "success", "message": "Không có gì thay đổi"}
+
+            query = f"UPDATE users SET {', '.join(updates)} WHERE id = %s"
+            params.append(user_id)
+            self.cursor.execute(query, tuple(params))
             self.connection.commit()
-            return {"status": "success", "message": "Cập nhật thành công"}
+            
+            # Return updated info including is_invisible
+            return {"status": "success", "is_invisible": is_invisible}
         except mysql.connector.Error as err:
             logger.error(f"Error updating profile: {err}")
-            return {"status": "error", "message": f"Lỗi database: {err}"}
+            return {"status": "error", "message": "Lỗi cập nhật thông tin"}
 
     def change_password(self, user_id, old_password, new_password):
         try:
@@ -405,3 +427,15 @@ class UserModel:
             return history
         except Exception:
             return []
+
+    def update_last_active(self, user_id):
+        try:
+            from datetime import datetime
+            now = datetime.now()
+            query = "UPDATE users SET last_active_at = %s WHERE id = %s"
+            self.cursor.execute(query, (now, user_id))
+            self.connection.commit()
+            return str(now)
+        except Exception as e:
+            logger.error(f"Error updating last active: {e}")
+            return None

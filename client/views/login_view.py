@@ -220,13 +220,18 @@ class LoginView(QtWidgets.QWidget):
             return
 
         try:
+            print("[DEBUG] Creating new socket and connecting to server...")
             # 1. Tạo socket và kết nối
             client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            client_socket.settimeout(5)  # 5 second timeout for connection
             client_socket.connect((SERVER_CONFIG["host"], SERVER_CONFIG["port"]))
+            client_socket.settimeout(None)  # Remove timeout after connection
+            print("[DEBUG] Connected! Creating controller...")
 
             # 2. KHỞI TẠO CONTROLLER NGAY TẠI ĐÂY
             # Controller sẽ tự động bắt đầu thread nhận dữ liệu
             self.controller = AuthController(client_socket)
+            print("[DEBUG] Controller created. Sending login request...")
 
             # 3. Gửi request Login thông qua Controller (thay vì gửi socket trần)
             request = {
@@ -236,10 +241,14 @@ class LoginView(QtWidgets.QWidget):
             }
             # Sử dụng send_request của controller để đảm bảo thread-safe
             response = self.controller.send_request(request)
+            print(f"[DEBUG login] Response received: {response}")
 
             if response.get("status") == "success":
                 user_id = response.get("user_id")
                 display_name = response.get("display_name")
+                
+                # Update controller with current user ID for reconnection logic
+                self.controller.current_user_id = user_id
 
                 # 4. TRUYỀN CONTROLLER (đã khởi tạo) SANG MAIN
                 # Lưu ý: Cần chắc chắn bạn đã sửa main.py để nhận tham số này

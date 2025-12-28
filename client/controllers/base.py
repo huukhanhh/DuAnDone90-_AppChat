@@ -16,8 +16,9 @@ class BaseController:
         self.message_queue = Queue()
         self.response_queue = Queue()
         self.running = True
-
-        threading.Thread(target=self._receive_loop, daemon=True).start()
+        
+        self._receive_thread = threading.Thread(target=self._receive_loop, daemon=True)
+        self._receive_thread.start()
 
     def _send_all(self, sock, data):
         total_sent = 0
@@ -46,17 +47,32 @@ class BaseController:
                     response = json.loads(data.decode('utf-8'))
 
                     action = response.get("action")
-                    push_actions = ["message", "group_message", "new_group", "profile_update_notification", "signal"]
+                    push_actions = ["message", "group_message", "new_group", "profile_update_notification", "signal", "user_status_update", "force_logout"]
 
+                    # === HANDLE FORCE_LOGOUT IMMEDIATELY ===
+                    # Set running=False BEFORE socket is closed by server
+                    # This prevents reconnect attempt when socket error occurs
+                    if action == "force_logout":
+                        print("[DEBUG receive_loop] Received force_logout, stopping controller")
+                        self.running = False  # Prevent reconnect
+                        self.message_queue.put(response)  # Still notify UI
+                        break  # Exit loop immediately
+                    
                     if action in push_actions:
                         self.message_queue.put(response)
                     else:
                         self.response_queue.put(response)
-            except (socket.error, json.JSONDecodeError):
+            except (socket.error, json.JSONDecodeError) as e:
+                print(f"[DEBUG receive_loop] Error: {type(e).__name__}: {e}")
+                # Only attempt reconnect if controller is still running
+                # (not force-stopped by logout/force_logout)
+                if not self.running:
+                    print("[DEBUG receive_loop] Controller stopped, not reconnecting")
+                    break
                 if not self.reconnect(): break
                 time.sleep(1)
             except Exception as e:
-                print(f"Receive error: {e}")
+                print(f"[DEBUG receive_loop] Unexpected Error: {type(e).__name__}: {e}")
                 break
 
     def reconnect(self):
@@ -90,6 +106,16 @@ class BaseController:
             return {"status": "error", "message": str(e)}
             
     def stop(self):
+        print("[DEBUG] Stopping controller...")
         self.running = False
-        try: self.client_socket.close()
+        try: 
+            self.client_socket.shutdown(socket.SHUT_RDWR)
         except: pass
+        try: 
+            self.client_socket.close()
+        except: pass
+        # Wait for receive thread to fully exit
+        if hasattr(self, '_receive_thread') and self._receive_thread.is_alive():
+            self._receive_thread.join(timeout=2)
+        print("[DEBUG] Controller stopped.")
+        time.sleep(0.5)  # Give OS time to release socket
