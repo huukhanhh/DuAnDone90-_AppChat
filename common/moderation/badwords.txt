@@ -1,0 +1,332 @@
+# Danh sách từ cấm tiếng Việt
+# Mỗi dòng là một từ/cụm từ cấm
+# File được tổng hợp từ vn_offensive_words.txt
+
+# === BUỒI variants ===
+buoi
+dau buoi
+daubuoi
+caidaubuoi
+nhucaidaubuoi
+dau boi
+boi
+dauboi
+caidauboi
+dau boy
+dauboy
+caidauboy
+
+# === CẶC variants ===
+cac
+cak
+kak
+kac
+concak
+nungcak
+bucak
+caiconcac
+caiconcak
+cu
+dai
+giai
+zai
+kiu
+
+# === CỨT variants ===
+cut
+cuccut
+cutcut
+cuk
+cuoi ia
+cuoi e
+
+# === ĐÉO variants ===
+deo
+dech
+dek
+det
+dach
+del
+dell
+
+# === ĐỊT variants ===
+dit
+dm
+dmm
+dmmm
+dmmmm
+dmmmmm
+dcm
+dcmm
+dcmmm
+dcmmmm
+dech
+det
+dis
+diz
+djt
+dit me
+dit mie
+dit ma
+dit mia
+dit ba
+dit cha
+dit con
+dit bo
+dit cu
+dis me
+disme
+dismje
+dismia
+dis mia
+dis mie
+dis mia
+dis mie
+ditmemayconcho
+ditmemay
+ditmethangoccho
+ditmeconcho
+dmconcho
+dmcs
+ditmecondi
+ditmecondicho
+
+# === ĐỤ variants ===
+du
+du me
+du mia
+du mie
+du ma
+du cha
+du ba
+du cha
+du con me
+du ma
+du me
+du mie
+du mia
+diu
+do mo
+de mo
+do ma ma
+do mama
+de mama
+de ma ma
+dou
+doma
+duoma
+dou ma
+duo ma
+dou ma
+diu ma
+a du
+a diu
+dau me
+dau ma
+
+# === ĐĨ variants ===
+di
+diem
+cdi
+dilol
+diloz
+dilon
+condi
+dime
+di me
+dimemay
+condime
+condimay
+condimemay
+con di cho
+condicho
+bitch
+biz
+bit chi
+con bich
+con bic
+con bit
+pho
+
+# === LỒN variants ===
+lon
+loz
+lin
+nulo
+ml
+matlon
+cailon
+matlol
+matloz
+thml
+thangmatlon
+thangml
+don li
+tml
+thml
+diml
+dml
+ham
+xam lol
+xao lol
+con lol
+an lol
+mat lol
+cai lol
+loi lol
+ham lol
+cu lol
+ngu lol
+tuoi lol
+mom lol
+nhu lol
+nung lol
+nug lol
+nuglol
+ranh lol
+dach lol
+mu lol
+banh lol
+tet lol
+vach lol
+cao lol
+tung lol
+mat lol
+xam lon
+xao lon
+con lon
+an lon
+mat lon
+cai lon
+loi lon
+ham lon
+cu lon
+ngu lon
+tuoi lon
+mom lon
+nhu lon
+nung lon
+nug lon
+nuglon
+ranh lon
+dach lon
+mu lon
+banh lon
+tet lon
+vach lon
+cao lon
+tung lon
+mat lon
+cai lo
+cl
+clgt
+co lo go to
+cai le gi thon
+don cua long
+sml
+sapmatlol
+sapmatlon
+sapmatloz
+sap mat
+vlon
+vloz
+vlol
+vailon
+vai lon
+vai lol
+vailol
+non lung
+vcl
+vl
+vleu
+
+# === SEXUAL related ===
+chich
+vai
+du
+nung
+nug
+dut dit
+chong mong
+banh hang
+xeo hang
+xhct
+xephinh
+la liem
+do vo
+xoac
+chich choac
+hup so
+fuck
+fck
+bo bu
+buscu
+
+# === HUMILIATION ===
+ngu
+oc cho
+occho
+lao cho
+lao cho
+bo lao
+cho ma
+co ho
+sang
+thang cho
+cho dien
+thang dien
+do dien
+sua bay
+sua tiep
+sua di
+sua can
+
+# === MẸ CHA variants ===
+me ba
+me cha may
+me cha anh
+me cha nha anh
+me cha nha may
+ma cha may
+ma cha nha may
+ma me
+ma cha
+ke me
+ke mie
+ke mia
+ke mja
+ke mje
+bo me
+bo mia
+bo mie
+bo mje
+bo mja
+chet me
+chet mia
+chet mie
+chet mja
+chet mje
+thay me
+thay mie
+thay mia
+to cha
+ba cha may
+cmn
+cmnl
+
+# === TIÊN SƯ variants ===
+tien su nha may
+tien su bo
+to su
+
+# === THÊM TỪ CẤM BỔ SUNG ===
+ditme
+duma
+concac
+concho
+ngumat
+thangcho
+conngu
+dodobien
+chothoi
+matday

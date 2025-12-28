@@ -353,3 +353,42 @@
 2025-12-28 18:06:23,500 - INFO - Sent force_logout to old session of user 5
 2025-12-28 18:06:23,500 - INFO - Kicked old session of user 5
 2025-12-28 18:06:26,356 - INFO - User 5 disconnected - broadcast sent
+2025-12-28 19:38:25,650 - INFO - Database connection established
+2025-12-28 19:38:25,650 - INFO - UserModel initialized successfully
+2025-12-28 19:38:25,651 - INFO - Moderation controller initialized
+2025-12-28 19:39:20,966 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-28 19:39:21,190 - INFO - User logged in: my@gmail.com
+2025-12-28 19:39:41,605 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-28 19:39:41,825 - INFO - User logged in: bo@gmail.com
+2025-12-28 19:39:50,205 - DEBUG - Message saved: 6 -> 5 (CallLog: False)
+2025-12-28 19:40:42,577 - INFO - User 6 disconnected - broadcast sent
+2025-12-28 19:40:44,417 - INFO - User 5 disconnected - broadcast sent
+2025-12-28 19:49:02,857 - INFO - Database connection established
+2025-12-28 19:49:02,858 - INFO - UserModel initialized successfully
+2025-12-28 19:49:02,858 - INFO - Moderation controller initialized
+2025-12-28 19:49:44,532 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-28 19:49:44,757 - INFO - User logged in: my@gmail.com
+2025-12-28 19:49:54,334 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-28 19:49:54,530 - INFO - User logged in: bo@gmail.com
+2025-12-28 19:50:05,052 - DEBUG - Message saved: 6 -> 5 (CallLog: False)
+2025-12-28 19:50:19,119 - DEBUG - Message saved: 6 -> 5 (CallLog: False)
+2025-12-28 19:53:04,250 - INFO - User 5 disconnected - broadcast sent
+2025-12-28 19:53:06,998 - INFO - User 6 disconnected - broadcast sent
+2025-12-28 20:17:05,878 - INFO - Database connection established
+2025-12-28 20:17:05,878 - INFO - UserModel initialized successfully
+2025-12-28 20:17:05,883 - INFO - Moderation controller initialized
+2025-12-28 20:17:17,176 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-28 20:17:17,375 - INFO - User logged in: bo@gmail.com
+2025-12-28 20:17:26,586 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-28 20:17:26,810 - INFO - User logged in: my@gmail.com
+2025-12-28 20:18:09,090 - DEBUG - Message saved: 5 -> 6 (CallLog: False)
+2025-12-28 20:18:28,397 - DEBUG - Message saved: 5 -> 6 (CallLog: False)
+2025-12-28 20:19:22,953 - INFO - User 6 disconnected - broadcast sent
+2025-12-28 20:19:24,320 - INFO - User 5 disconnected - broadcast sent
+2025-12-28 20:19:35,770 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-28 20:19:35,983 - INFO - User logged in: my@gmail.com
+2025-12-28 20:19:41,241 - INFO - User 5 disconnected - broadcast sent
+2025-12-28 20:22:24,017 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2025-12-28 20:22:24,223 - INFO - User logged in: my@gmail.com
+2025-12-28 20:22:32,453 - DEBUG - Message saved: 5 -> 6 (CallLog: False)
+2025-12-28 20:22:34,513 - INFO - User 5 disconnected - broadcast sent

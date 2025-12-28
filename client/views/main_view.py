@@ -22,10 +22,11 @@ from client.views.profile_view import ProfileDialog
 from client.views.create_group_dialog import CreateGroupDialog
 from client.views.ai_chat_view import AIChatView
 from client.views.call_dialog import IncomingCallDialog, ActiveCallDialog
+from client.controllers.moderation_controller import ClientModerationController
+from config.config import BADWORDS_PATH
 
 
-# --- GIỮ NGUYÊN CÁC CLASS CON: ChatListItem, VoiceMessageWidget, ClickableLabel, VideoMessageWidget ---
-# (Bạn hãy giữ nguyên code các class con này như cũ để tiết kiệm dòng, chỉ thay class MainView bên dưới)
+
 
 class ChatListItem(QtWidgets.QWidget):
     def __init__(self, user_id, display_name, last_message="", avatar_base64=None, item_type="user", parent=None):
@@ -361,6 +362,9 @@ class MainView(QtWidgets.QMainWindow):
         self.current_mode = "user"
         self.ai_chat_window = None # Window AI Chat
         self._message_check_running = True  # Flag to control message checking loop
+        
+        # Khởi tạo Moderation Controller
+        self.moderation_controller = ClientModerationController(BADWORDS_PATH)
 
         self.setWindowTitle("Python Chat App")
         self.resize(1100, 750)
@@ -1114,13 +1118,29 @@ class MainView(QtWidgets.QMainWindow):
              self.on_typing_timer_timeout()
 
         if not msg or not self.current_receiver_id: return
+        
+        # === MODERATION CHECK ===
+        mod_result = self.moderation_controller.check_outgoing_text(msg)
+        
+        # Sử dụng văn bản đã censor (nếu có từ cấm sẽ được thay bằng ***)
+        message_to_send = mod_result.get("censored_text", msg)
+        
+        # Hiển thị thông báo cảnh báo nếu có từ ngữ không phù hợp
+        if mod_result["action"] == "WARN":
+            QtWidgets.QMessageBox.information(
+                self, 
+                "Thông báo", 
+                mod_result["reason"]
+            )
+        # === END MODERATION CHECK ===
+        
         try:
             if self.current_mode == "user":
-                resp = self.controller.send_message(self.current_receiver_id, msg)
+                resp = self.controller.send_message(self.current_receiver_id, message_to_send)
             else:
-                resp = self.controller.send_group_message(self.current_receiver_id, msg)
+                resp = self.controller.send_group_message(self.current_receiver_id, message_to_send)
             if resp and resp.get("status") == "success":
-                self.add_message_to_chat(msg, "Bạn", True, avatar_base64=self.self_avatar)
+                self.add_message_to_chat(message_to_send, "Bạn", True, avatar_base64=self.self_avatar)
                 self.message_input.clear()
         except Exception as e:
             print(e)

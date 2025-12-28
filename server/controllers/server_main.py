@@ -3,7 +3,7 @@ import socket
 import struct
 import threading
 import logging
-from config.config import SERVER_CONFIG
+from config.config import SERVER_CONFIG, BADWORDS_PATH
 
 # Import Các Sub-Controller
 from server.models.user_model import UserModel
@@ -11,6 +11,7 @@ from server.controllers.auth_controller import AuthController
 from server.controllers.user_controller import UserController
 from server.controllers.chat_controller import ChatController
 from server.controllers.group_controller import GroupController
+from server.controllers.moderation_controller import ServerModerationController
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -42,6 +43,10 @@ class ServerController:
             self.user_ctrl = UserController(self.model)
             self.chat_ctrl = ChatController(self.model)
             self.group_ctrl = GroupController(self.model)
+            
+            # Khởi tạo Moderation Controller
+            self.mod_ctrl = ServerModerationController(BADWORDS_PATH)
+            logger.info("Moderation controller initialized")
             
         except Exception as e:
             logger.error(f"Cannot initialize model/controllers: {str(e)}")
@@ -270,6 +275,17 @@ class ServerController:
                     elif action in ["message", "send_image", "send_voice", "send_video", "system_log"]:
                         if client_socket in self.clients:
                             sender_id = self.clients[client_socket]
+                            
+                            # === MODERATION CHECK (Text Message) ===
+                            if action == "message":
+                                mod_result = self.mod_ctrl.check_incoming_text(request)
+                                if mod_result["action"] == "WARN":
+                                    # Sử dụng văn bản đã censor thay vì block
+                                    censored_text = mod_result.get("censored_text", request.get("message", ""))
+                                    request["message"] = censored_text
+                                    logger.info(f"Message CENSORED from user {sender_id}: {mod_result['hits']}")
+                            # === END MODERATION CHECK ===
+                            
                             res_data = self.chat_ctrl.handle_message(sender_id, request)
                             
                             if res_data:
@@ -325,6 +341,16 @@ class ServerController:
                     elif action == "group_message":
                         sender_id = self.clients.get(client_socket)
                         if sender_id:
+                            # === MODERATION CHECK (Group Message) ===
+                            if not request.get("is_image", False):  # Chỉ check text, không check ảnh
+                                mod_result = self.mod_ctrl.check_incoming_text(request)
+                                if mod_result["action"] == "WARN":
+                                    # Sử dụng văn bản đã censor thay vì block
+                                    censored_text = mod_result.get("censored_text", request.get("message", ""))
+                                    request["message"] = censored_text
+                                    logger.info(f"Group message CENSORED from user {sender_id}: {mod_result['hits']}")
+                            # === END MODERATION CHECK ===
+                            
                             res_data = self.group_ctrl.handle_group_message(sender_id, request)
                             gid = res_data["group_id"]
                             members = self.model.get_group_members(gid)
