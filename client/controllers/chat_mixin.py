@@ -20,6 +20,24 @@ class ChatMixin:
             "video_data": video_data, "filename": filename
         }, timeout=120)
 
+    def send_file(self, receiver_id, file_data, filename, file_size):
+        """
+        Gửi file tài liệu (txt, pdf, docx, xlsx).
+        
+        Args:
+            receiver_id: ID người nhận
+            file_data: Dữ liệu file (base64)
+            filename: Tên file
+            file_size: Kích thước file (bytes)
+        """
+        return self.send_request({
+            "action": "send_file", 
+            "receiver_id": receiver_id,
+            "file_data": file_data, 
+            "filename": filename,
+            "file_size": file_size
+        }, timeout=60)
+
     def send_call_log(self, receiver_id, content):
         return self.send_request({
             "action": "system_log", "receiver_id": receiver_id, "content": content

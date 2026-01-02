@@ -272,7 +272,7 @@ class ServerController:
                         if uid:
                             response = self.chat_ctrl.get_history(uid, request.get("receiver_id"))
 
-                    elif action in ["message", "send_image", "send_voice", "send_video", "system_log"]:
+                    elif action in ["message", "send_image", "send_voice", "send_video", "system_log", "send_file"]:
                         if client_socket in self.clients:
                             sender_id = self.clients[client_socket]
                             
@@ -312,15 +312,30 @@ class ServerController:
                                     "voice_data": request.get("voice_data") if res_data.get("msg_type") == "voice" else None,
                                     "is_video": res_data.get("msg_type") == "video",
                                     "video_data": request.get("video_data") if res_data.get("msg_type") == "video" else None,
-                                    "is_call_log": res_data.get("is_call_log", False)
+                                    "is_call_log": res_data.get("is_call_log", False),
+                                    "is_file": res_data.get("is_file", False),
+                                    "file_data": res_data.get("file_data"),
+                                    "file_size": res_data.get("file_size", 0)
                                 }
                                 
+                                receiver_socket = None
                                 with self.lock:
                                     if receiver_id in self.user_sockets:
-                                        self.send_to_client(self.user_sockets[receiver_id], msg_data)
+                                        receiver_socket = self.user_sockets[receiver_id]
+
+                                if receiver_socket:
+                                    if msg_data.get("is_file"):
+                                         # Run in thread to prevent blocking the entire server or sender loop
+                                         threading.Thread(
+                                             target=self.send_to_client, 
+                                             args=(receiver_socket, msg_data),
+                                             daemon=True
+                                         ).start()
                                     else:
-                                        if receiver_id not in self.offline_messages: self.offline_messages[receiver_id] = []
-                                        self.offline_messages[receiver_id].append(msg_data)
+                                         self.send_to_client(receiver_socket, msg_data)
+                                else:
+                                    if receiver_id not in self.offline_messages: self.offline_messages[receiver_id] = []
+                                    self.offline_messages[receiver_id].append(msg_data)
                                 
                                 response = {"status": "success"}
 

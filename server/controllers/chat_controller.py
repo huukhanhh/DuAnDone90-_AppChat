@@ -43,4 +43,11 @@ class ChatController:
             self.model.save_video_message(sender_id, receiver_id, request.get("video_data"), filename)
             return {"msg_type": "video", "content": filename}
 
+        elif action == "send_file":
+            filename = request.get("filename", "file.bin")
+            file_size = request.get("file_size", 0)
+            file_data = request.get("file_data")
+            self.model.save_file_message(sender_id, receiver_id, file_data, filename, file_size)
+            return {"msg_type": "file", "content": filename, "file_size": file_size, "file_data": file_data, "is_file": True}
+
         return None

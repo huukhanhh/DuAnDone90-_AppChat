@@ -195,6 +195,69 @@ class VoiceMessageWidget(QtWidgets.QWidget):
                 pass
 
 
+class FileMessageWidget(QtWidgets.QWidget):
+    def __init__(self, filename, file_data, file_size, is_self=False, parent=None):
+        super().__init__(parent)
+        self.filename = filename
+        self.file_data = file_data
+        self.file_size = file_size
+        
+        layout = QtWidgets.QHBoxLayout(self)
+        layout.setContentsMargins(10, 5, 10, 5)
+        layout.setSpacing(10)
+        
+        # Icon
+        icon_label = QtWidgets.QLabel("📄")
+        icon_label.setStyleSheet("font-size: 20px; color: white;")
+        layout.addWidget(icon_label)
+        
+        # Info (Name + Size)
+        info_layout = QtWidgets.QVBoxLayout()
+        info_layout.setSpacing(2)
+        
+        name_label = QtWidgets.QLabel(filename)
+        name_label.setStyleSheet("font-weight: bold; color: white;")
+        info_layout.addWidget(name_label)
+        
+        size_str = f"{file_size / 1024:.1f} KB" if file_size < 1024*1024 else f"{file_size / (1024*1024):.1f} MB"
+        size_label = QtWidgets.QLabel(size_str)
+        size_label.setStyleSheet("font-size: 10px; color: #eee;")
+        info_layout.addWidget(size_label)
+        
+        layout.addLayout(info_layout)
+        
+        # Download Button
+        self.btn_download = QtWidgets.QPushButton("⬇")
+        self.btn_download.setFixedSize(30, 30)
+        self.btn_download.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
+        self.btn_download.setStyleSheet("""
+            QPushButton { 
+                background-color: rgba(255,255,255,0.2); 
+                border: none; 
+                border-radius: 15px; 
+                color: white; 
+                font-weight: bold;
+            } 
+            QPushButton:hover { 
+                background-color: rgba(255,255,255,0.4); 
+            }
+        """)
+        self.btn_download.clicked.connect(self.download_file)
+        layout.addWidget(self.btn_download)
+        
+        self.setStyleSheet("background: transparent;")
+        self.setFixedWidth(250)
+        
+    def download_file(self):
+        try:
+            save_path, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Lưu file", self.filename)
+            if save_path:
+                with open(save_path, 'wb') as f:
+                    f.write(base64.b64decode(self.file_data))
+                QtWidgets.QMessageBox.information(self, "Thành công", "Đã lưu file thành công!")
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(self, "Lỗi", f"Không thể lưu file: {e}")
+
 class ClickableLabel(QtWidgets.QLabel):
     clicked = QtCore.Signal()
 
@@ -345,7 +408,7 @@ class VideoMessageWidget(QtWidgets.QWidget):
 # ====================================================================
 class MainView(QtWidgets.QMainWindow):
     # Khai báo các tín hiệu để giao tiếp giữa luồng mạng và luồng giao diện
-    message_received = QtCore.Signal(str, str, str, int, int, str, bool)  # content, sender_name, message_type, target_id, sender_id, sender_avatar, is_system
+    message_received = QtCore.Signal(str, str, str, int, int, str, bool, str, int)  # content, sender_name, message_type, target_id, sender_id, sender_avatar, is_system, file_data, file_size
     profile_updated_signal = QtCore.Signal(int, str)  # uid, name (không gửi avatar qua signal)
     new_group_signal = QtCore.Signal()
     status_updated_signal = QtCore.Signal(int, str) # uid, status
@@ -365,6 +428,8 @@ class MainView(QtWidgets.QMainWindow):
         
         # Khởi tạo Moderation Controller
         self.moderation_controller = ClientModerationController(BADWORDS_PATH)
+        # Warm-up AI model in background to prevent lag on first message
+        threading.Thread(target=self.moderation_controller._ensure_initialized, daemon=True).start()
 
         self.setWindowTitle("Python Chat App")
         self.resize(1100, 750)
@@ -676,6 +741,11 @@ class MainView(QtWidgets.QMainWindow):
         self.btn_vid.clicked.connect(self.send_video)
         inp_layout.addWidget(self.btn_vid)
         
+        # Nút gửi file tài liệu (📎)
+        self.btn_file = self._create_icon_button("📎", "#3498db", "Gửi file (txt, pdf, docx, xlsx)")
+        self.btn_file.clicked.connect(self.send_file)
+        inp_layout.addWidget(self.btn_file)
+        
         # Nút Gọi đã bị xóa khỏi đây
         # self.btn_call = self._create_icon_button("📞", "#2ecc71", "Gọi điện")
         # self.btn_call.clicked.connect(self.start_call)
@@ -965,6 +1035,8 @@ class MainView(QtWidgets.QMainWindow):
                     self.add_message_to_chat(msg["video_data"], name, is_self, is_video=True, avatar_base64=avatar)
                 elif msg.get("is_call_log"): 
                     self.add_message_to_chat(msg["message"], name, is_self, is_call_log=True, avatar_base64=avatar)
+                elif msg.get("is_file"):
+                    self.add_message_to_chat(msg["message"], name, is_self, is_file=True, file_data=msg.get("file_data"), file_size=msg.get("file_size", 0), avatar_base64=avatar)
                 elif msg.get("is_system"):
                      self.add_system_message(msg["message"])
                 else:
@@ -980,10 +1052,10 @@ class MainView(QtWidgets.QMainWindow):
         js = self.chat_scroll.verticalScrollBar()
         js.setValue(js.maximum())
 
-    def add_message_to_chat(self, message, sender_name, is_self=False, is_image=False, is_voice=False, is_video=False, is_call_log=False,
+    def add_message_to_chat(self, message, sender_name, is_self=False, is_image=False, is_voice=False, is_video=False, is_call_log=False, is_file=False, file_data=None, file_size=0,
                             avatar_base64=None):
         try:
-            bubble = self.create_message_bubble(message, sender_name, is_self, is_image, is_voice, is_video, is_call_log,
+            bubble = self.create_message_bubble(message, sender_name, is_self, is_image, is_voice, is_video, is_call_log, is_file, file_data, file_size,
                                                 avatar_base64)
             self.chat_messages_layout.insertWidget(self.chat_messages_layout.count() - 1, bubble)
             QtCore.QTimer.singleShot(100, lambda: self.chat_scroll.verticalScrollBar().setValue(
@@ -991,7 +1063,7 @@ class MainView(QtWidgets.QMainWindow):
         except Exception as e:
             print(f"Lỗi add msg: {e}")
 
-    def create_message_bubble(self, message, sender_name, is_self, is_image, is_voice, is_video, is_call_log, avatar_base64):
+    def create_message_bubble(self, message, sender_name, is_self, is_image, is_voice, is_video, is_call_log, is_file, file_data, file_size, avatar_base64):
         bubble_widget = QtWidgets.QWidget()
         bubble_layout = QtWidgets.QHBoxLayout(bubble_widget)
         bubble_layout.setContentsMargins(0, 5, 0, 5) # Increased margins
@@ -1076,6 +1148,12 @@ class MainView(QtWidgets.QMainWindow):
             content_layout.addWidget(msg_widget)
         elif is_video:
             msg_widget = VideoMessageWidget(message, is_self)
+            content_layout.addWidget(msg_widget)
+        elif is_file:
+            msg_widget = FileMessageWidget(message, file_data, file_size, is_self)
+            # Gradient background for file similar to voice
+            msg_widget.setStyleSheet(
+                f"background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 {'#667eea' if is_self else '#7f8c8d'}, stop:1 {'#764ba2' if is_self else '#95a5a6'}); border-radius: 15px;")
             content_layout.addWidget(msg_widget)
         elif is_image:
             lbl_img = QtWidgets.QLabel()
@@ -1193,6 +1271,77 @@ class MainView(QtWidgets.QMainWindow):
             except Exception as e:
                 print(e)
                 QtWidgets.QMessageBox.critical(self, "Lỗi", f"Không thể gửi video: {e}")
+
+    def send_file(self):
+        """Gửi file tài liệu (txt, pdf, docx, xlsx) trong chat 1-1."""
+        if not self.current_receiver_id: return
+        if self.current_mode != "user":
+            QtWidgets.QMessageBox.warning(self, "Thông báo", "Chức năng gửi file chỉ hỗ trợ chat 1-1.")
+            return
+        
+        # Định dạng file được phép
+        ALLOWED_EXTENSIONS = {'.txt', '.pdf', '.docx', '.xlsx'}
+        
+        # Giới hạn kích thước (bytes)
+        SIZE_LIMITS = {
+            '.txt': 2 * 1024 * 1024,      # 2MB cho txt
+            '.pdf': 10 * 1024 * 1024,     # 10MB
+            '.docx': 10 * 1024 * 1024,    # 10MB
+            '.xlsx': 10 * 1024 * 1024,    # 10MB
+        }
+        
+        file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self, 
+            "Chọn file", 
+            "", 
+            "Documents (*.txt *.pdf *.docx *.xlsx)"
+        )
+        
+        if not file_path:
+            return
+        
+        # Lấy extension
+        filename = os.path.basename(file_path)
+        _, ext = os.path.splitext(filename)
+        ext = ext.lower()
+        
+        # Kiểm tra định dạng
+        if ext not in ALLOWED_EXTENSIONS:
+            QtWidgets.QMessageBox.warning(
+                self, 
+                "Định dạng không hỗ trợ", 
+                f"Chỉ hỗ trợ các định dạng: txt, pdf, docx, xlsx\n\nFile của bạn: {ext}"
+            )
+            return
+        
+        # Kiểm tra kích thước
+        file_size = os.path.getsize(file_path)
+        max_size = SIZE_LIMITS.get(ext, 10 * 1024 * 1024)
+        
+        if file_size > max_size:
+            max_mb = max_size / (1024 * 1024)
+            current_mb = file_size / (1024 * 1024)
+            QtWidgets.QMessageBox.warning(
+                self, 
+                "File quá lớn", 
+                f"File {ext} không được vượt quá {max_mb:.0f}MB.\n\nFile của bạn: {current_mb:.1f}MB"
+            )
+            return
+        
+        try:
+            with open(file_path, 'rb') as f:
+                data = base64.b64encode(f.read()).decode('utf-8')
+            
+            resp = self.controller.send_file(self.current_receiver_id, data, filename, file_size)
+            
+            if resp and resp.get("status") == "success":
+                # Hiển thị tin nhắn file đã gửi
+                self.add_message_to_chat(filename, "Bạn", True, is_file=True, file_data=data, file_size=file_size, avatar_base64=self.self_avatar)
+            else:
+                QtWidgets.QMessageBox.critical(self, "Lỗi", "Không thể gửi file. Vui lòng thử lại.")
+        except Exception as e:
+            print(f"Lỗi gửi file: {e}")
+            QtWidgets.QMessageBox.critical(self, "Lỗi", f"Không thể gửi file: {e}")
 
     def start_call(self):
         if not self.current_receiver_id:
@@ -1415,12 +1564,20 @@ class MainView(QtWidgets.QMainWindow):
                     group_id = msg.get('group_id')
                     t = 'text'
                     content = msg.get('message', '')
+                    file_data = None
+                    file_size = 0
+
                     if msg.get('is_image'):
                         t = 'image'; content = msg.get('image_data')
                     elif msg.get('is_voice'):
                         t = 'voice'; content = msg.get('voice_data')
                     elif msg.get('is_video'):
                         t = 'video'; content = msg.get('video_data')
+                    elif msg.get('is_file'):
+                        t = 'file'
+                        # Content is filename from server
+                        file_data = msg.get('file_data')
+                        file_size = int(msg.get('file_size', 0))
                     elif msg.get('is_call_log'):
                         t = 'call_log'
                     
@@ -1450,7 +1607,7 @@ class MainView(QtWidgets.QMainWindow):
 
                     if should_display:
                         # Truyền cả sender_id và sender_avatar để hiển thị đúng
-                        self.message_received.emit(content, sender_name, t, target_id_for_signal, sender_id, sender_avatar, is_system)
+                        self.message_received.emit(content, sender_name, t, target_id_for_signal, sender_id, sender_avatar, is_system, file_data, file_size)
             except Exception as e:
                 if self._message_check_running:
                     print(f"Error checking messages: {e}")
@@ -1669,10 +1826,11 @@ class MainView(QtWidgets.QMainWindow):
                 self.header_status_label.setText("Offline")
                 self.header_status_label.show()
 
-    def display_incoming_message(self, message, sender_name, message_type, target_id, sender_id=None, sender_avatar=None, is_system=False):
+    def display_incoming_message(self, message, sender_name, message_type, target_id, sender_id=None, sender_avatar=None, is_system=False, file_data=None, file_size=0):
         is_img = (message_type == 'image')
         is_voice = (message_type == 'voice')
         is_video = (message_type == 'video')
+        is_file = (message_type == 'file')
         is_call_log = (message_type == 'call_log')
         
         # Ưu tiên dùng avatar từ message (mới nhất), nếu không có thì dùng cache
@@ -1686,7 +1844,7 @@ class MainView(QtWidgets.QMainWindow):
              self.add_system_message(message)
              return
 
-        self.add_message_to_chat(message, sender_name, False, is_img, is_voice, is_video, is_call_log, avatar)
+        self.add_message_to_chat(message, sender_name, False, is_img, is_voice, is_video, is_call_log, is_file, file_data, file_size, avatar)
 
     def refresh_self_profile(self):
         try:

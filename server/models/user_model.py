@@ -165,11 +165,25 @@ class UserModel:
         except mysql.connector.Error as err:
             logger.error(f"Error saving video message: {err}")
 
+    def save_file_message(self, sender_id, receiver_id, file_data, filename, file_size):
+        """Lưu tin nhắn file vào database"""
+        try:
+            query = """
+                    INSERT INTO chat_messages (sender_id, receiver_id, message, is_file, file_data, file_size)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    """
+            self.cursor.execute(query, (sender_id, receiver_id, filename, True, file_data, file_size))
+            self.connection.commit()
+            logger.debug(f"File message saved: {sender_id} -> {receiver_id}")
+        except mysql.connector.Error as err:
+            logger.error(f"Error saving file message: {err}")
+
 
     def get_chat_history(self, sender_id, receiver_id):
         try:
             query = """
-                    SELECT sender_id, message, timestamp, is_image, image_data, is_voice, voice_data, is_video, video_data, is_call_log
+                    SELECT sender_id, message, timestamp, is_image, image_data, is_voice, voice_data, 
+                           is_video, video_data, is_call_log, is_file, file_data, file_size
                     FROM chat_messages
                     WHERE (sender_id = %s AND receiver_id = %s)
                        OR (sender_id = %s AND receiver_id = %s)
@@ -187,7 +201,8 @@ class UserModel:
                     "is_image": bool(row[3]) if row[3] is not None else False,
                     "is_voice": bool(row[5]) if row[5] is not None else False,
                     "is_video": bool(row[7]) if len(row) > 7 and row[7] is not None else False,
-                    "is_call_log": bool(row[9]) if len(row) > 9 and row[9] is not None else False
+                    "is_call_log": bool(row[9]) if len(row) > 9 and row[9] is not None else False,
+                    "is_file": bool(row[10]) if len(row) > 10 and row[10] is not None else False
                 }
 
                 if msg["is_image"]:
@@ -198,6 +213,10 @@ class UserModel:
                     msg["message"] = row[1]  # filename
                 elif msg["is_video"]:
                     msg["video_data"] = row[8] if len(row) > 8 else None
+                    msg["message"] = row[1]  # filename
+                elif msg["is_file"]:
+                    msg["file_data"] = row[11] if len(row) > 11 else None
+                    msg["file_size"] = row[12] if len(row) > 12 else 0
                     msg["message"] = row[1]  # filename
                 else:
                     msg["message"] = row[1]
