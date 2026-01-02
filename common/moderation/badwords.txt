@@ -17,6 +17,7 @@ dauboy
 caidauboy
 
 # === CẶC variants ===
+cec
 cac
 cak
 kak
@@ -39,6 +40,7 @@ cutcut
 cuk
 cuoi ia
 cuoi e
+rac ruoi
 
 # === ĐÉO variants ===
 deo

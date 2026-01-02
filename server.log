@@ -392,3 +392,38 @@
 2025-12-28 20:22:24,223 - INFO - User logged in: my@gmail.com
 2025-12-28 20:22:32,453 - DEBUG - Message saved: 5 -> 6 (CallLog: False)
 2025-12-28 20:22:34,513 - INFO - User 5 disconnected - broadcast sent
+2026-01-02 16:15:30,012 - INFO - Database connection established
+2026-01-02 16:15:30,013 - INFO - UserModel initialized successfully
+2026-01-02 16:15:30,013 - INFO - Moderation controller initialized
+2026-01-02 16:15:58,183 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-02 16:16:06,487 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-02 16:16:06,704 - INFO - User logged in: my@gmail.com
+2026-01-02 16:16:25,819 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2026-01-02 16:16:26,322 - DEBUG - https://huggingface.co:443 "HEAD /christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new/resolve/main/config.json HTTP/1.1" 307 0
+2026-01-02 16:16:26,352 - DEBUG - https://huggingface.co:443 "HEAD /api/resolve-cache/models/christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new/4c1817d86a0ec69588db3ae74336023b7d1033ec/config.json HTTP/1.1" 200 0
+2026-01-02 16:16:26,723 - DEBUG - https://huggingface.co:443 "GET /api/models/christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new/tree/main/additional_chat_templates?recursive=False&expand=False HTTP/1.1" 404 64
+2026-01-02 16:16:27,023 - DEBUG - https://huggingface.co:443 "GET /api/models/christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new/tree/main?recursive=True&expand=False HTTP/1.1" 200 1709
+2026-01-02 16:16:27,860 - DEBUG - https://huggingface.co:443 "GET /api/models/christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new HTTP/1.1" 200 1899
+2026-01-02 16:16:28,051 - INFO - Message CENSORED from user 5: []
+2026-01-02 16:16:28,061 - DEBUG - Message saved: 5 -> 6 (CallLog: False)
+2026-01-02 16:16:42,882 - INFO - Message CENSORED from user 5: []
+2026-01-02 16:16:42,886 - DEBUG - Message saved: 5 -> 6 (CallLog: False)
+2026-01-02 16:17:02,810 - INFO - Message CENSORED from user 5: []
+2026-01-02 16:17:02,814 - DEBUG - Message saved: 5 -> 6 (CallLog: False)
+2026-01-02 16:19:09,055 - INFO - Database connection established
+2026-01-02 16:19:09,055 - INFO - UserModel initialized successfully
+2026-01-02 16:19:09,055 - INFO - Moderation controller initialized
+2026-01-02 16:19:17,623 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-02 16:19:17,829 - INFO - User logged in: my@gmail.com
+2026-01-02 16:19:28,019 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2026-01-02 16:19:28,556 - DEBUG - https://huggingface.co:443 "HEAD /christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new/resolve/main/config.json HTTP/1.1" 307 0
+2026-01-02 16:19:28,583 - DEBUG - https://huggingface.co:443 "HEAD /api/resolve-cache/models/christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new/4c1817d86a0ec69588db3ae74336023b7d1033ec/config.json HTTP/1.1" 200 0
+2026-01-02 16:19:28,955 - DEBUG - https://huggingface.co:443 "GET /api/models/christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new/tree/main/additional_chat_templates?recursive=False&expand=False HTTP/1.1" 404 64
+2026-01-02 16:19:29,245 - DEBUG - https://huggingface.co:443 "GET /api/models/christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new/tree/main?recursive=True&expand=False HTTP/1.1" 200 1709
+2026-01-02 16:19:29,959 - DEBUG - https://huggingface.co:443 "GET /api/models/christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new HTTP/1.1" 200 1899
+2026-01-02 16:19:30,141 - DEBUG - Message saved: 5 -> 6 (CallLog: False)
+2026-01-02 16:19:37,258 - DEBUG - Message saved: 5 -> 6 (CallLog: False)
+2026-01-02 16:19:40,456 - DEBUG - Message saved: 5 -> 6 (CallLog: False)
+2026-01-02 16:19:44,300 - DEBUG - Message saved: 5 -> 6 (CallLog: False)
+2026-01-02 16:19:50,638 - DEBUG - Message saved: 5 -> 6 (CallLog: False)
+2026-01-02 16:20:07,428 - DEBUG - Message saved: 5 -> 2 (CallLog: False)

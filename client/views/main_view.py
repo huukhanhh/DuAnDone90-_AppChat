@@ -1119,19 +1119,34 @@ class MainView(QtWidgets.QMainWindow):
 
         if not msg or not self.current_receiver_id: return
         
-        # === MODERATION CHECK ===
+        # === MODERATION CHECK (Decision Engine: AI + Rule-based) ===
         mod_result = self.moderation_controller.check_outgoing_text(msg)
+        action = mod_result.get("action", "ALLOW")
         
-        # Sử dụng văn bản đã censor (nếu có từ cấm sẽ được thay bằng ***)
-        message_to_send = mod_result.get("censored_text", msg)
-        
-        # Hiển thị thông báo cảnh báo nếu có từ ngữ không phù hợp
-        if mod_result["action"] == "WARN":
-            QtWidgets.QMessageBox.information(
+        # --- MỨC 3: BLOCK (Chặn hoàn toàn) ---
+        if action == "BLOCK":
+            QtWidgets.QMessageBox.critical(
                 self, 
-                "Thông báo", 
-                mod_result["reason"]
+                "Tin nhắn bị chặn", 
+                mod_result.get("reason", "Tin nhắn vi phạm tiêu chuẩn cộng đồng.")
             )
+            # KHÔNG gửi tin nhắn, chỉ xóa input
+            self.message_input.clear()
+            return
+        
+        # --- MỨC 2: WARN (Cảnh báo, che từ xấu) ---
+        if action == "WARN":
+            QtWidgets.QMessageBox.warning(
+                self, 
+                "Cảnh báo", 
+                mod_result.get("reason", "Tin nhắn có ngôn từ không phù hợp.")
+            )
+            # Gửi tin nhắn đã che từ xấu
+            message_to_send = mod_result.get("final_text", msg)
+        else:
+            # --- MỨC 1: ALLOW (Gửi bình thường) ---
+            message_to_send = msg
+        
         # === END MODERATION CHECK ===
         
         try:

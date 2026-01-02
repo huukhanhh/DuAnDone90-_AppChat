@@ -279,9 +279,17 @@ class ServerController:
                             # === MODERATION CHECK (Text Message) ===
                             if action == "message":
                                 mod_result = self.mod_ctrl.check_incoming_text(request)
-                                if mod_result["action"] == "WARN":
-                                    # Sử dụng văn bản đã censor thay vì block
-                                    censored_text = mod_result.get("censored_text", request.get("message", ""))
+                                
+                                if mod_result["action"] == "BLOCK":
+                                    # Vi phạm nặng (profanity) -> Không broadcast, return lỗi
+                                    logger.warning(f"Message BLOCKED from user {sender_id}: {mod_result['hits']}")
+                                    response = {"status": "error", "code": "MESSAGE_BLOCKED"}
+                                    self.send_to_client(client_socket, response)
+                                    continue  # Không xử lý tiếp
+                                
+                                elif mod_result["action"] == "WARN":
+                                    # Vi phạm nhẹ -> Che từ xấu, vẫn broadcast
+                                    censored_text = mod_result.get("final_text", request.get("message", ""))
                                     request["message"] = censored_text
                                     logger.info(f"Message CENSORED from user {sender_id}: {mod_result['hits']}")
                             # === END MODERATION CHECK ===
@@ -344,9 +352,17 @@ class ServerController:
                             # === MODERATION CHECK (Group Message) ===
                             if not request.get("is_image", False):  # Chỉ check text, không check ảnh
                                 mod_result = self.mod_ctrl.check_incoming_text(request)
-                                if mod_result["action"] == "WARN":
-                                    # Sử dụng văn bản đã censor thay vì block
-                                    censored_text = mod_result.get("censored_text", request.get("message", ""))
+                                
+                                if mod_result["action"] == "BLOCK":
+                                    # Vi phạm nặng -> Không broadcast
+                                    logger.warning(f"Group message BLOCKED from user {sender_id}: {mod_result['hits']}")
+                                    response = {"status": "error", "code": "MESSAGE_BLOCKED"}
+                                    self.send_to_client(client_socket, response)
+                                    continue
+                                
+                                elif mod_result["action"] == "WARN":
+                                    # Vi phạm nhẹ -> Che từ xấu
+                                    censored_text = mod_result.get("final_text", request.get("message", ""))
                                     request["message"] = censored_text
                                     logger.info(f"Group message CENSORED from user {sender_id}: {mod_result['hits']}")
                             # === END MODERATION CHECK ===
