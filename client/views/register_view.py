@@ -91,7 +91,7 @@ class RegisterView(QtWidgets.QWidget):
             font-weight: 600; 
             color: rgba(255, 255, 255, 0.9); 
             background: transparent;
-            margin-left: 5px;
+margin-left: 5px;
             margin-bottom: 3px;
         """)
         container_layout.addWidget(name_label)
@@ -170,7 +170,7 @@ class RegisterView(QtWidgets.QWidget):
             padding: 5px;
         """)
         self.status_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        self.status_label.setWordWrap(True)
+self.status_label.setWordWrap(True)
         container_layout.addWidget(self.status_label)
 
         container_layout.addSpacing(15)
@@ -248,7 +248,7 @@ class RegisterView(QtWidgets.QWidget):
             }
         """)
         self.back_button.clicked.connect(self.go_to_login)
-        self.back_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
+self.back_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
         container_layout.addWidget(self.back_button)
 
         # Center container in main layout
@@ -329,7 +329,7 @@ class RegisterView(QtWidgets.QWidget):
             while len(resp_data) < resp_length:
                 chunk = client_socket.recv(min(resp_length - len(resp_data), 4096))
                 if not chunk:
-                    raise socket.error("Kết nối bị đóng")
+raise socket.error("Kết nối bị đóng")
                 resp_data += chunk
             response = json.loads(resp_data.decode('utf-8'))
             client_socket.close()
@@ -370,6 +370,7 @@ class RegisterView(QtWidgets.QWidget):
             self.status_label.setText("Lỗi phản hồi từ server")
         except Exception as e:
             self.status_label.setText(f"Lỗi: {str(e)}")
+
 
     def go_to_login(self):
         self.app.show_login()
