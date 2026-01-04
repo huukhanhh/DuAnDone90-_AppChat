@@ -698,3 +698,35 @@
 2026-01-04 20:35:11,721 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
 2026-01-04 20:35:12,378 - INFO - User logged in: my@gmail.com
 2026-01-04 20:35:30,092 - INFO - User 5 disconnected - broadcast sent
+2026-01-04 21:00:03,525 - INFO - Database connection established
+2026-01-04 21:00:03,525 - INFO - UserModel initialized successfully
+2026-01-04 21:00:03,525 - INFO - Moderation controller initialized
+2026-01-04 21:04:33,392 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-04 21:04:33,597 - INFO - User logged in: my@gmail.com
+2026-01-04 21:04:55,314 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-04 21:04:55,517 - INFO - User logged in: bo@gmail.com
+2026-01-04 21:05:15,396 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2026-01-04 21:05:15,868 - DEBUG - https://huggingface.co:443 "HEAD /christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new/resolve/main/config.json HTTP/1.1" 307 0
+2026-01-04 21:05:15,885 - DEBUG - https://huggingface.co:443 "HEAD /api/resolve-cache/models/christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new/4c1817d86a0ec69588db3ae74336023b7d1033ec/config.json HTTP/1.1" 200 0
+2026-01-04 21:05:16,249 - DEBUG - https://huggingface.co:443 "GET /api/models/christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new/tree/main/additional_chat_templates?recursive=False&expand=False HTTP/1.1" 404 64
+2026-01-04 21:05:16,522 - DEBUG - https://huggingface.co:443 "GET /api/models/christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new/tree/main?recursive=True&expand=False HTTP/1.1" 200 1709
+2026-01-04 21:05:17,306 - DEBUG - https://huggingface.co:443 "GET /api/models/christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new HTTP/1.1" 200 1899
+2026-01-04 21:05:17,511 - DEBUG - Message saved: 5 -> 6 (CallLog: False)
+2026-01-04 21:05:22,668 - DEBUG - Message saved: 6 -> 5 (CallLog: False)
+2026-01-04 21:05:29,680 - DEBUG - Message saved: 5 -> 6 (CallLog: False)
+2026-01-04 21:05:36,188 - INFO - User 5 disconnected - broadcast sent
+2026-01-04 21:05:44,754 - DEBUG - Voice message saved: 6 -> 5
+2026-01-04 21:05:57,869 - DEBUG - Voice message saved: 6 -> 5
+2026-01-04 21:06:12,142 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-04 21:06:12,522 - INFO - User logged in: my@gmail.com
+2026-01-04 21:06:37,266 - DEBUG - Message saved: 6 -> 5 (CallLog: True)
+2026-01-04 21:06:43,722 - INFO - User 6 disconnected - broadcast sent
+2026-01-04 21:08:22,496 - INFO - User 5 disconnected - broadcast sent
+2026-01-04 21:08:48,465 - INFO - Database connection established
+2026-01-04 21:08:48,465 - INFO - UserModel initialized successfully
+2026-01-04 21:08:48,465 - INFO - Moderation controller initialized
+2026-01-04 21:09:08,470 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-04 21:09:08,677 - INFO - User logged in: my@gmail.com
+2026-01-04 21:09:28,818 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-04 21:09:29,028 - INFO - User logged in: huuhoan@gmail.com
+2026-01-04 21:10:20,077 - INFO - User 5 disconnected - broadcast sent
