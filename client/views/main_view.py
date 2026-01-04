@@ -30,7 +30,7 @@ from config.config import BADWORDS_PATH
 
 
 class ChatListItem(QtWidgets.QWidget):
-    def __init__(self, user_id, display_name, last_message="", avatar_base64=None, item_type="user", parent=None):
+    def __init__(self, user_id, display_name, last_message="", avatar_base64=None, item_type="user", timestamp="", parent=None):
         super().__init__(parent)
         self.user_id = user_id
         self.item_type = item_type
@@ -38,76 +38,108 @@ class ChatListItem(QtWidgets.QWidget):
         self.avatar_base64 = avatar_base64
         layout = QtWidgets.QHBoxLayout()
         layout.setContentsMargins(15, 12, 15, 12)
-        layout.setSpacing(10)
+        layout.setSpacing(12)
+        
+        # Avatar với viền tròn
         avatar_label = QtWidgets.QLabel()
-        avatar_label.setFixedSize(40, 40)
+        avatar_label.setFixedSize(48, 48)
         avatar_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         if self.avatar_base64:
             try:
                 pix = QtGui.QPixmap()
                 pix.loadFromData(base64.b64decode(self.avatar_base64))
                 # Tạo pixmap tròn
-                rounded = QtGui.QPixmap(40, 40)
+                rounded = QtGui.QPixmap(48, 48)
                 rounded.fill(QtCore.Qt.transparent)
                 painter = QtGui.QPainter(rounded)
                 painter.setRenderHint(QtGui.QPainter.Antialiasing)
                 path = QtGui.QPainterPath()
-                path.addEllipse(0, 0, 40, 40)
+                path.addEllipse(0, 0, 48, 48)
                 painter.setClipPath(path)
-                painter.drawPixmap(0, 0, pix.scaled(40, 40, QtCore.Qt.AspectRatioMode.KeepAspectRatioByExpanding, QtCore.Qt.TransformationMode.SmoothTransformation))
+                painter.drawPixmap(0, 0, pix.scaled(48, 48, QtCore.Qt.AspectRatioMode.KeepAspectRatioByExpanding, QtCore.Qt.TransformationMode.SmoothTransformation))
                 painter.end()
                 avatar_label.setPixmap(rounded)
                 avatar_label.setStyleSheet("background-color: transparent;")
             except Exception:
                 avatar_label.setText("👤")
-                avatar_label.setStyleSheet("background-color: #ddd; border-radius: 20px;")
+                avatar_label.setStyleSheet("background-color: #e8e8e8; border-radius: 24px; font-size: 20px;")
         else:
             avatar_label.setText("👤")
-            avatar_label.setStyleSheet("background-color: #ddd; border-radius: 20px;")
+            avatar_label.setStyleSheet("background-color: #e8e8e8; border-radius: 24px; font-size: 20px;")
         layout.addWidget(avatar_label)
 
-        # Info Layout
+        # Info Layout (Name + Last Message)
         info_layout = QtWidgets.QVBoxLayout()
-        info_layout.setSpacing(2)
+        info_layout.setSpacing(4)
         
-        # Name Layout (Name + Status Dot)
-        name_layout = QtWidgets.QHBoxLayout()
-        name_layout.setSpacing(5)
+        # Top row: Name + Timestamp
+        top_row = QtWidgets.QHBoxLayout()
+        top_row.setSpacing(8)
         
         name_label = QtWidgets.QLabel(display_name)
-        name_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #2c3e50;")
-        name_layout.addWidget(name_label)
+        name_label.setStyleSheet("font-size: 14px; font-weight: 600; color: #1a1a1a;")
+        top_row.addWidget(name_label)
         
         self.status_dot = QtWidgets.QLabel("●")
-        self.status_dot.setStyleSheet("color: #2ecc71; font-size: 10px;") # Green dot
-        self.status_dot.hide() # Default hidden
-        name_layout.addWidget(self.status_dot)
-        name_layout.addStretch()
+        self.status_dot.setStyleSheet("color: #22c55e; font-size: 8px;")  # Green dot
+        self.status_dot.hide()  # Default hidden
+        top_row.addWidget(self.status_dot)
+        top_row.addStretch()
         
-        info_layout.addLayout(name_layout)
+        # Timestamp
+        self.time_label = QtWidgets.QLabel(timestamp)
+        self.time_label.setStyleSheet("font-size: 12px; color: #9ca3af;")
+        top_row.addWidget(self.time_label)
+        
+        info_layout.addLayout(top_row)
 
-        last_msg_label = QtWidgets.QLabel(last_message if last_message else "Bắt đầu trò chuyện...")
-        last_msg_label.setStyleSheet("font-size: 12px; color: #8e8e93;")
-        last_msg_label.setWordWrap(False)
-        info_layout.addWidget(last_msg_label)
-        layout.addLayout(info_layout)
+        # Bottom row: Last message with typing indicator support
+        bottom_row = QtWidgets.QHBoxLayout()
+        self.last_msg_label = QtWidgets.QLabel(last_message if last_message else "Bắt đầu trò chuyện...")
+        self.last_msg_label.setStyleSheet("font-size: 13px; color: #6b7280;")
+        self.last_msg_label.setWordWrap(False)
+        bottom_row.addWidget(self.last_msg_label)
+        bottom_row.addStretch()
+        
+        # Check mark for sent/read status
+        self.check_mark = QtWidgets.QLabel("✓")
+        self.check_mark.setStyleSheet("color: #22c55e; font-size: 12px;")
+        self.check_mark.hide()  # Default hidden
+        bottom_row.addWidget(self.check_mark)
+        
+        info_layout.addLayout(bottom_row)
+        layout.addLayout(info_layout, 1)
+        
         self.setLayout(layout)
         self.setCursor(QtCore.Qt.PointingHandCursor)
         self.setStyleSheet("""
             ChatListItem { 
                 background-color: transparent; 
-                border-bottom: 1px solid #f0f0f0; 
+                border-bottom: 1px solid rgba(0,0,0,0.06); 
             } 
             ChatListItem:hover { 
-                background-color: #f5f6fa; 
+                background-color: rgba(0,0,0,0.03); 
             }
         """)
+    
+    def set_typing(self, is_typing, name=""):
+        """Hiển thị trạng thái đang gõ"""
+        if is_typing:
+            self.last_msg_label.setText(f"<span style='color: #22c55e;'>... đang soạn tin</span>")
+        else:
+            self.last_msg_label.setText("Nhấn để xem tin nhắn")
 
     def set_online(self, is_online):
         if is_online:
             self.status_dot.show()
+            self.check_mark.show()
         else:
             self.status_dot.hide()
+            self.check_mark.hide()
+    
+    def set_timestamp(self, timestamp):
+        """Cập nhật timestamp"""
+        self.time_label.setText(timestamp)
 
 
 class WaveformWidget(QtWidgets.QWidget):
@@ -562,10 +594,28 @@ class MainView(QtWidgets.QMainWindow):
         qr.moveCenter(cp)
         self.move(qr.topLeft())
 
-        # UI Setup
+        # UI Setup - Soft gradient outer frame with mint/green loang effect
         central_widget = QtWidgets.QWidget()
+        central_widget.setStyleSheet("""
+            QWidget#central_widget {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 #d4e7d4, stop:0.25 #c8dfc8, 
+                    stop:0.5 #bcd7bc, stop:0.75 #d0e3d0, 
+                    stop:1 #e0ede0);
+            }
+        """)
+        central_widget.setObjectName("central_widget")
         self.setCentralWidget(central_widget)
-        main_layout = QtWidgets.QHBoxLayout(central_widget)
+        
+        # Outer frame layout with padding
+        outer_layout = QtWidgets.QVBoxLayout(central_widget)
+        outer_layout.setContentsMargins(10, 10, 10, 10)
+        outer_layout.setSpacing(0)
+        
+        # Inner container for 3-column layout
+        inner_container = QtWidgets.QWidget()
+        inner_container.setStyleSheet("background: transparent;")
+        main_layout = QtWidgets.QHBoxLayout(inner_container)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
 
@@ -574,15 +624,17 @@ class MainView(QtWidgets.QMainWindow):
 
         # Ngăn xếp nội dung chính (Main Content Stack)
         self.stack = QtWidgets.QStackedWidget()
+        self.stack.setStyleSheet("background: transparent;")
         
         # --- Trang 0: Chat Cá nhân/Nhóm (Splitter) ---
         self.chat_container = QtWidgets.QWidget()
+        self.chat_container.setStyleSheet("background: transparent;")
         self.chat_layout = QtWidgets.QHBoxLayout(self.chat_container)
         self.chat_layout.setContentsMargins(0, 0, 0, 0)
         
         self.splitter = QtWidgets.QSplitter(QtCore.Qt.Orientation.Horizontal)
-        self.splitter.setHandleWidth(1)
-        self.splitter.setStyleSheet("QSplitter::handle { background-color: #e0e0e0; }")
+        self.splitter.setHandleWidth(0)
+        self.splitter.setStyleSheet("QSplitter::handle { background-color: transparent; }")
 
         self.setup_user_list()
         self.splitter.addWidget(self.user_list_widget)
@@ -603,6 +655,7 @@ class MainView(QtWidgets.QMainWindow):
         self.stack.addWidget(self.ai_chat_view) # Index 1
         
         main_layout.addWidget(self.stack)
+        outer_layout.addWidget(inner_container)
 
         # Thiết lập Logic
         self.controller.current_user_id = self.user_id
@@ -651,123 +704,120 @@ class MainView(QtWidgets.QMainWindow):
 
         threading.Thread(target=self.check_incoming_messages, daemon=True).start()
 
-    # --- UI Setup ---
     def setup_sidebar(self):
-        """Setup navigation sidebar (Column 1) - Avatar first, then navigation icons"""
+        """Setup navigation sidebar (Column 1) - Minimal icons with hover effects only"""
         self.sidebar_widget = QtWidgets.QWidget()
-        self.sidebar_widget.setFixedWidth(75)
+        self.sidebar_widget.setFixedWidth(90)  # 1.5x larger
         self.sidebar_widget.setStyleSheet("""
             QWidget { 
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                    stop:0 #667eea, stop:0.5 #764ba2, stop:1 #6B5B95); 
+                background: transparent;
             }
             QPushButton {
                 background-color: transparent;
                 border-radius: 18px;
                 font-size: 24px;
-                color: rgba(255,255,255,0.7);
                 border: none;
             }
             QPushButton:hover {
-                background-color: rgba(255, 255, 255, 0.2);
-                color: white;
+                background-color: rgba(255, 255, 255, 0.5);
             }
             QPushButton[active="true"] {
-                background-color: rgba(255, 255, 255, 0.3);
-                border: 2px solid rgba(255,255,255,0.8);
-                color: white;
+                background-color: rgba(255, 255, 255, 0.7);
             }
         """)
         layout = QtWidgets.QVBoxLayout(self.sidebar_widget)
-        layout.setContentsMargins(12, 20, 12, 20)
-        layout.setSpacing(15)
-        layout.setAlignment(QtCore.Qt.AlignCenter)
+        layout.setContentsMargins(10, 20, 10, 20)
+        layout.setSpacing(8)
+        layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignHCenter)
 
         # User Avatar (FIRST - at top)
         self.sidebar_avatar = ClickableLabel()
-        self.sidebar_avatar.setFixedSize(50, 50)
+        self.sidebar_avatar.setFixedSize(56, 56)
         self.sidebar_avatar.setStyleSheet("""
-            background-color: rgba(255,255,255,0.2); 
-            border-radius: 25px; 
-            border: 2px solid rgba(255,255,255,0.8);
+            background-color: rgba(255,255,255,0.8); 
+            border-radius: 28px; 
+            border: 2px solid rgba(255,255,255,0.9);
         """)
         self.sidebar_avatar.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.sidebar_avatar.setToolTip("Hồ sơ cá nhân")
         self.sidebar_avatar.clicked.connect(self.open_profile_dialog)
-        layout.addWidget(self.sidebar_avatar, 0, QtCore.Qt.AlignCenter)
+        layout.addWidget(self.sidebar_avatar, alignment=QtCore.Qt.AlignmentFlag.AlignHCenter)
         
-        layout.addSpacing(10)
+        layout.addSpacing(15)
 
-        # Chat 1-1 Button
+        # Chat 1-1 Button - Just icon, hover shows soft background
         self.btn_chat_one = QtWidgets.QPushButton("💬")
-        self.btn_chat_one.setFixedSize(50, 50)
+        self.btn_chat_one.setFixedSize(56, 56)
         self.btn_chat_one.setToolTip("Chat cá nhân")
         self.btn_chat_one.setProperty("active", True)
         self.btn_chat_one.clicked.connect(self.switch_to_user_mode)
-        layout.addWidget(self.btn_chat_one, 0, QtCore.Qt.AlignCenter)
+        layout.addWidget(self.btn_chat_one, alignment=QtCore.Qt.AlignmentFlag.AlignHCenter)
 
         # Group Chat Button
         self.btn_chat_group = QtWidgets.QPushButton("👥")
-        self.btn_chat_group.setFixedSize(50, 50)
+        self.btn_chat_group.setFixedSize(56, 56)
         self.btn_chat_group.setToolTip("Chat nhóm")
         self.btn_chat_group.clicked.connect(self.switch_to_group_mode)
-        layout.addWidget(self.btn_chat_group, 0, QtCore.Qt.AlignCenter)
+        layout.addWidget(self.btn_chat_group, alignment=QtCore.Qt.AlignmentFlag.AlignHCenter)
 
         # AI Chat Button
         self.btn_ai_chat = QtWidgets.QPushButton("🤖")
-        self.btn_ai_chat.setFixedSize(50, 50)
+        self.btn_ai_chat.setFixedSize(56, 56)
         self.btn_ai_chat.setToolTip("Gemini AI Assistant")
         self.btn_ai_chat.clicked.connect(self.open_ai_chat)
-        layout.addWidget(self.btn_ai_chat, 0, QtCore.Qt.AlignCenter)
+        layout.addWidget(self.btn_ai_chat, alignment=QtCore.Qt.AlignmentFlag.AlignHCenter)
 
         # Settings Button
         self.btn_settings = QtWidgets.QPushButton("⚙️")
-        self.btn_settings.setFixedSize(50, 50)
+        self.btn_settings.setFixedSize(56, 56)
         self.btn_settings.setToolTip("Cài đặt")
         self.btn_settings.clicked.connect(self.open_profile_dialog)
-        layout.addWidget(self.btn_settings, 0, QtCore.Qt.AlignCenter)
+        layout.addWidget(self.btn_settings, alignment=QtCore.Qt.AlignmentFlag.AlignHCenter)
 
         layout.addStretch()
 
-        # Logout Button (at bottom)
+        # Logout Button (at bottom) - Soft effect on hover
         self.btn_logout = QtWidgets.QPushButton("⏻")
-        self.btn_logout.setFixedSize(50, 50)
+        self.btn_logout.setFixedSize(56, 56)
         self.btn_logout.setToolTip("Đăng xuất")
         self.btn_logout.setStyleSheet("""
             QPushButton { 
-                background-color: transparent; 
+                background-color: rgba(255, 200, 200, 0.4); 
                 border-radius: 18px; 
-                font-size: 22px; 
-                color: rgba(255,150,150,0.9); 
+                font-size: 24px; 
             }
             QPushButton:hover { 
-                background-color: rgba(255, 100, 100, 0.3); 
-                color: #ff6b6b; 
+                background-color: rgba(255, 180, 180, 0.6); 
             }
         """)
         self.btn_logout.clicked.connect(self.logout)
-        layout.addWidget(self.btn_logout, 0, QtCore.Qt.AlignCenter)
+        layout.addWidget(self.btn_logout, alignment=QtCore.Qt.AlignmentFlag.AlignHCenter)
 
 
 
     def setup_user_list(self):
         """Setup chat list panel (Column 2) - Search + Chat list"""
         self.user_list_widget = QtWidgets.QWidget()
-        self.user_list_widget.setMinimumWidth(300)
+        self.user_list_widget.setMinimumWidth(280)
         self.user_list_widget.setStyleSheet("""
-            QWidget { background-color: #ffffff; }
+            QWidget#user_list_widget { 
+                background-color: #f8f6f0; 
+                border-top-left-radius: 15px;
+                border-bottom-left-radius: 15px;
+            }
         """)
+        self.user_list_widget.setObjectName("user_list_widget")
         layout = QtWidgets.QVBoxLayout(self.user_list_widget)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
         # Header with title
         header_container = QtWidgets.QWidget()
-        header_container.setFixedHeight(60)
+        header_container.setFixedHeight(55)
         header_container.setStyleSheet("""
             QWidget { 
-                background-color: #fafbfc; 
-                border-bottom: 1px solid #e8e8e8;
+                background-color: transparent; 
+                border-bottom: 1px solid rgba(0,0,0,0.08);
             }
         """)
         header_layout = QtWidgets.QHBoxLayout(header_container)
@@ -806,24 +856,23 @@ class MainView(QtWidgets.QMainWindow):
 
         # Search box with icon
         search_container = QtWidgets.QWidget()
-        search_container.setStyleSheet("background-color: #ffffff; padding: 10px 15px;")
+        search_container.setStyleSheet("background-color: transparent; padding: 8px 12px;")
         search_layout = QtWidgets.QHBoxLayout(search_container)
-        search_layout.setContentsMargins(15, 12, 15, 12)
+        search_layout.setContentsMargins(12, 10, 12, 10)
 
         self.search_box = QtWidgets.QLineEdit()
         self.search_box.setPlaceholderText("🔍 Tìm kiếm...")
         self.search_box.setStyleSheet("""
             QLineEdit { 
-                border: 1px solid #e0e0e0; 
-                border-radius: 20px; 
-                padding: 10px 18px; 
-                background-color: #f5f6f8; 
+                border: none; 
+                border-radius: 18px; 
+                padding: 10px 16px; 
+                background-color: rgba(0,0,0,0.05); 
                 color: #333333;
-                font-size: 14px;
+                font-size: 13px;
             }
             QLineEdit:focus { 
-                border: 1px solid #667eea; 
-                background-color: #ffffff;
+                background-color: rgba(255,255,255,0.8);
             }
         """)
         self.search_box.textChanged.connect(self.on_search_text_changed)
@@ -837,24 +886,24 @@ class MainView(QtWidgets.QMainWindow):
         scroll_area.setStyleSheet("""
             QScrollArea { 
                 border: none; 
-                background: #ffffff; 
+                background: transparent; 
             }
             QScrollBar:vertical {
                 border: none;
-                background: #f0f0f0;
-                width: 8px;
-                border-radius: 4px;
+                background: transparent;
+                width: 6px;
+                border-radius: 3px;
             }
             QScrollBar::handle:vertical {
-                background: #c0c0c0;
-                border-radius: 4px;
+                background: rgba(0,0,0,0.15);
+                border-radius: 3px;
             }
             QScrollBar::handle:vertical:hover {
-                background: #a0a0a0;
+                background: rgba(0,0,0,0.25);
             }
         """)
         scroll_content = QtWidgets.QWidget()
-        scroll_content.setStyleSheet("background: #ffffff;")
+        scroll_content.setStyleSheet("background: transparent;")
         self.chat_list_layout = QtWidgets.QVBoxLayout(scroll_content)
         self.chat_list_layout.setContentsMargins(0, 0, 0, 0)
         self.chat_list_layout.setSpacing(0)
@@ -864,15 +913,31 @@ class MainView(QtWidgets.QMainWindow):
 
     def setup_chat_area(self):
         self.chat_area_widget = QtWidgets.QWidget()
-        self.chat_area_widget.setStyleSheet("background-color: #f5f6fa;")
+        self.chat_area_widget.setObjectName("chat_area_widget")
+        self.chat_area_widget.setStyleSheet("""
+            QWidget#chat_area_widget {
+                background-color: #ffffff;
+                border-top-right-radius: 15px;
+                border-bottom-right-radius: 15px;
+            }
+        """)
         layout = QtWidgets.QVBoxLayout(self.chat_area_widget)
         layout.setContentsMargins(0, 0, 0, 0)
 
         self.chat_header = QtWidgets.QWidget()
         self.chat_header.setFixedHeight(65)
-        self.chat_header.setStyleSheet("background-color: white; border-bottom: 1px solid #ddd;")
+        self.chat_header.setStyleSheet("background-color: #ffffff; border-bottom: 1px solid rgba(0,0,0,0.06);")
         h_layout = QtWidgets.QHBoxLayout(self.chat_header)
-        h_layout.setContentsMargins(15, 5, 15, 5)
+        h_layout.setContentsMargins(15, 8, 15, 8)
+        h_layout.setSpacing(12)
+        
+        # Header Avatar
+        self.header_avatar = QtWidgets.QLabel()
+        self.header_avatar.setFixedSize(45, 45)
+        self.header_avatar.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.header_avatar.setText("👤")
+        self.header_avatar.setStyleSheet("background-color: #e8e8e8; border-radius: 22px; font-size: 18px;")
+        h_layout.addWidget(self.header_avatar)
 
         # Container cho Text (Name + Status)
         text_container = QtWidgets.QWidget()
@@ -881,13 +946,24 @@ class MainView(QtWidgets.QMainWindow):
         v_layout.setSpacing(2)
 
         self.header_name_label = QtWidgets.QLabel("Chọn một người để chat")
-        self.header_name_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #2c3e50;")
+        self.header_name_label.setStyleSheet("font-size: 16px; font-weight: 600; color: #1a1a1a;")
         v_layout.addWidget(self.header_name_label)
 
+        # Status row with green dot
+        status_row = QtWidgets.QHBoxLayout()
+        status_row.setSpacing(5)
+        
+        self.header_status_dot = QtWidgets.QLabel("●")
+        self.header_status_dot.setStyleSheet("color: #22c55e; font-size: 10px;")
+        self.header_status_dot.hide()
+        status_row.addWidget(self.header_status_dot)
+        
         self.header_status_label = QtWidgets.QLabel("")
-        self.header_status_label.setStyleSheet("font-size: 12px; color: #7f8c8d;")
-        self.header_status_label.hide() # Ẩn mặc định
-        v_layout.addWidget(self.header_status_label)
+        self.header_status_label.setStyleSheet("font-size: 13px; color: #22c55e;")
+        self.header_status_label.hide()
+        status_row.addWidget(self.header_status_label)
+        status_row.addStretch()
+        v_layout.addLayout(status_row)
 
         h_layout.addWidget(text_container)
         
@@ -895,38 +971,61 @@ class MainView(QtWidgets.QMainWindow):
         
         # Nút Gọi (Trên cùng bên phải)
         self.btn_call_header = QtWidgets.QPushButton("📞")
-        self.btn_call_header.setFixedSize(40, 40)
+        self.btn_call_header.setFixedSize(38, 38)
         self.btn_call_header.setStyleSheet("""
-            QPushButton { background-color: #f0f2f5; border-radius: 20px; font-size: 20px; color: #667eea; border: none; }
-            QPushButton:hover { background-color: #e4e6eb; }
+            QPushButton { background-color: #f3f4f6; border-radius: 19px; font-size: 18px; border: none; }
+            QPushButton:hover { background-color: #e5e7eb; }
         """)
         self.btn_call_header.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
         self.btn_call_header.clicked.connect(self.start_call)
+        self.btn_call_header.hide()
         h_layout.addWidget(self.btn_call_header)
+        
+        # Nút Video Call
+        self.btn_video_call = QtWidgets.QPushButton("📹")
+        self.btn_video_call.setFixedSize(38, 38)
+        self.btn_video_call.setStyleSheet("""
+            QPushButton { background-color: #f3f4f6; border-radius: 19px; font-size: 18px; border: none; }
+            QPushButton:hover { background-color: #e5e7eb; }
+        """)
+        self.btn_video_call.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
+        self.btn_video_call.hide()
+        h_layout.addWidget(self.btn_video_call)
+        
+        # Nút Copy/Notes
+        self.btn_notes = QtWidgets.QPushButton("📋")
+        self.btn_notes.setFixedSize(38, 38)
+        self.btn_notes.setStyleSheet("""
+            QPushButton { background-color: #f3f4f6; border-radius: 19px; font-size: 18px; border: none; }
+            QPushButton:hover { background-color: #e5e7eb; }
+        """)
+        self.btn_notes.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
+        self.btn_notes.hide()
+        h_layout.addWidget(self.btn_notes)
 
         # Nút Thêm Thành Viên
         self.btn_add_member = QtWidgets.QPushButton("➕")
-        self.btn_add_member.setFixedSize(40, 40)
+        self.btn_add_member.setFixedSize(38, 38)
         self.btn_add_member.setToolTip("Thêm thành viên")
-        self.btn_add_member.setStyleSheet("QPushButton { background-color: #f0f2f5; border-radius: 20px; font-size: 18px; border: none; } QPushButton:hover { background-color: #e4e6eb; }")
+        self.btn_add_member.setStyleSheet("QPushButton { background-color: #f3f4f6; border-radius: 19px; font-size: 16px; border: none; } QPushButton:hover { background-color: #e5e7eb; }")
         self.btn_add_member.clicked.connect(self.add_member_to_group)
         self.btn_add_member.hide()
         h_layout.addWidget(self.btn_add_member)
 
         # Nút Rời Nhóm
         self.btn_leave_group = QtWidgets.QPushButton("🚪")
-        self.btn_leave_group.setFixedSize(40, 40)
+        self.btn_leave_group.setFixedSize(38, 38)
         self.btn_leave_group.setToolTip("Rời nhóm")
-        self.btn_leave_group.setStyleSheet("QPushButton { background-color: #ffebee; border-radius: 20px; font-size: 18px; color: #d32f2f; border: none; } QPushButton:hover { background-color: #ffcdd2; }")
+        self.btn_leave_group.setStyleSheet("QPushButton { background-color: #fef2f2; border-radius: 19px; font-size: 16px; border: none; } QPushButton:hover { background-color: #fee2e2; }")
         self.btn_leave_group.clicked.connect(self.leave_group)
         self.btn_leave_group.hide()
         h_layout.addWidget(self.btn_leave_group)
 
-        # Nút Xem Thành Viên (Mới)
-        self.btn_view_members = QtWidgets.QPushButton("📜")
-        self.btn_view_members.setFixedSize(40, 40)
+        # Nút Xem Thành Viên
+        self.btn_view_members = QtWidgets.QPushButton("📄")
+        self.btn_view_members.setFixedSize(38, 38)
         self.btn_view_members.setToolTip("Xem danh sách thành viên")
-        self.btn_view_members.setStyleSheet("QPushButton { background-color: #f0f2f5; border-radius: 20px; font-size: 18px; border: none; } QPushButton:hover { background-color: #e4e6eb; }")
+        self.btn_view_members.setStyleSheet("QPushButton { background-color: #f3f4f6; border-radius: 19px; font-size: 16px; border: none; } QPushButton:hover { background-color: #e5e7eb; }")
         self.btn_view_members.clicked.connect(self.view_group_members)
         self.btn_view_members.hide()
         h_layout.addWidget(self.btn_view_members)
@@ -974,57 +1073,144 @@ class MainView(QtWidgets.QMainWindow):
         self.typing_label.hide()
         layout.addWidget(self.typing_label)
 
+        # ==========================================
+        # INPUT BAR - Blends with chat area background
+        # Elements float above the background
+        # ==========================================
         input_container = QtWidgets.QWidget()
+        input_container.setObjectName("input_container")
         input_container.setStyleSheet("""
-            QWidget { 
-                background-color: #f5f6fa; 
+            QWidget#input_container { 
+                background-color: transparent;
             }
         """)
-        input_container.setFixedHeight(70)
+        input_container.setFixedHeight(75)
         inp_layout = QtWidgets.QHBoxLayout(input_container)
-        inp_layout.setContentsMargins(15, 10, 15, 10)
-        inp_layout.setSpacing(6)
+        inp_layout.setContentsMargins(20, 8, 20, 18)
+        inp_layout.setSpacing(10)
 
-        # Icon buttons with floating rounded style
-        self.btn_img = self._create_icon_button("🖼️", "#667eea", "Gửi ảnh")
+        # Floating icon button style - appears to float on chat background
+        floating_btn_style = """
+            QPushButton { 
+                background-color: rgba(248, 248, 248, 0.95);
+                border: none;
+                border-radius: 22px;
+                font-size: 20px;
+            }
+            QPushButton:hover { 
+                background-color: rgba(240, 240, 240, 1.0);
+            }
+            QPushButton:pressed {
+                background-color: rgba(230, 230, 230, 1.0);
+            }
+        """
+
+        # Image button - Neumorphic floating
+        self.btn_img = QtWidgets.QPushButton("🖼️")
+        self.btn_img.setFixedSize(44, 44)
+        self.btn_img.setToolTip("Gửi ảnh")
+        self.btn_img.setCursor(QtCore.Qt.PointingHandCursor)
+        self.btn_img.setStyleSheet(floating_btn_style)
         self.btn_img.clicked.connect(self.send_image)
         inp_layout.addWidget(self.btn_img)
         
-        self.btn_vid = self._create_icon_button("🎬", "#8e44ad", "Gửi video")
+        # Video button - Neumorphic floating
+        self.btn_vid = QtWidgets.QPushButton("🎬")
+        self.btn_vid.setFixedSize(44, 44)
+        self.btn_vid.setToolTip("Gửi video")
+        self.btn_vid.setCursor(QtCore.Qt.PointingHandCursor)
+        self.btn_vid.setStyleSheet(floating_btn_style)
         self.btn_vid.clicked.connect(self.send_video)
         inp_layout.addWidget(self.btn_vid)
         
-        self.btn_file = self._create_icon_button("📎", "#3498db", "Gửi file (txt, pdf, docx, xlsx)")
+        # File button - Neumorphic floating
+        self.btn_file = QtWidgets.QPushButton("📎")
+        self.btn_file.setFixedSize(44, 44)
+        self.btn_file.setToolTip("Gửi file (txt, pdf, docx, xlsx)")
+        self.btn_file.setCursor(QtCore.Qt.PointingHandCursor)
+        self.btn_file.setStyleSheet(floating_btn_style)
         self.btn_file.clicked.connect(self.send_file)
         inp_layout.addWidget(self.btn_file)
 
-        self.btn_mic = self._create_icon_button("🎤", "#e74c3c", "Giữ để ghi âm")
+        # Mic button - Neumorphic floating
+        self.btn_mic = QtWidgets.QPushButton("🎤")
+        self.btn_mic.setFixedSize(44, 44)
+        self.btn_mic.setToolTip("Giữ để ghi âm")
+        self.btn_mic.setCursor(QtCore.Qt.PointingHandCursor)
+        self.btn_mic.setStyleSheet("""
+            QPushButton { 
+                background-color: #ffffff;
+                border: none;
+                border-radius: 22px;
+                font-size: 20px;
+            }
+            QPushButton:hover { 
+                background-color: #fafafa;
+            }
+            QPushButton:pressed {
+                background-color: #ffe0e0;
+            }
+        """)
         self.btn_mic.pressed.connect(self.start_recording)
         self.btn_mic.released.connect(self.stop_recording)
         inp_layout.addWidget(self.btn_mic)
 
-        # Message input with rounded style
+        # Message input - Pill-shaped Neumorphic style with floating effect
         self.message_input = QtWidgets.QLineEdit()
         self.message_input.setPlaceholderText("Nhập tin nhắn...")
         self.message_input.setStyleSheet("""
             QLineEdit { 
-                border: none; 
-                background-color: #ffffff; 
-                border-radius: 22px; 
-                padding: 12px 20px; 
+                background-color: #ffffff;
+                border: none;
+                border-radius: 25px; 
+                padding: 14px 22px; 
                 font-size: 14px; 
                 color: #333333; 
             }
+            QLineEdit:focus {
+                background-color: #ffffff;
+            }
+            QLineEdit::placeholder {
+                color: #aaaaaa;
+            }
         """)
+        self.message_input.setMinimumHeight(50)
         self.message_input.returnPressed.connect(self.send_message)
         self.message_input.textChanged.connect(self.handle_typing_input)
         inp_layout.addWidget(self.message_input)
 
-        self.btn_emoji = self._create_icon_button("😊", "#f39c12", "Emoji")
+        # Emoji button - Neumorphic floating
+        self.btn_emoji = QtWidgets.QPushButton("😊")
+        self.btn_emoji.setFixedSize(44, 44)
+        self.btn_emoji.setToolTip("Emoji")
+        self.btn_emoji.setCursor(QtCore.Qt.PointingHandCursor)
+        self.btn_emoji.setStyleSheet(floating_btn_style)
         self.btn_emoji.clicked.connect(self.show_emoji_picker)
         inp_layout.addWidget(self.btn_emoji)
         
-        self.btn_send = self._create_icon_button("➤", "#667eea", "Gửi")
+        # Send button - Gradient blue/purple Neumorphic
+        self.btn_send = QtWidgets.QPushButton("➤")
+        self.btn_send.setFixedSize(44, 44)
+        self.btn_send.setToolTip("Gửi")
+        self.btn_send.setCursor(QtCore.Qt.PointingHandCursor)
+        self.btn_send.setStyleSheet("""
+            QPushButton { 
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, 
+                    stop:0 #667eea, stop:1 #764ba2);
+                color: white; 
+                font-size: 18px; 
+                border-radius: 22px;
+                border: none;
+            } 
+            QPushButton:hover { 
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, 
+                    stop:0 #5a6fd6, stop:1 #6a3f92);
+            }
+            QPushButton:pressed {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, 
+                    stop:0 #4e5fc6, stop:1 #5a3582);
+            }
+        """)
         self.btn_send.clicked.connect(self.send_message)
         inp_layout.addWidget(self.btn_send)
 
@@ -1034,19 +1220,19 @@ class MainView(QtWidgets.QMainWindow):
         """Create floating icon button with rounded background"""
         btn = QtWidgets.QPushButton(text)
         btn.setToolTip(tooltip)
-        btn.setFixedSize(42, 42)
+        btn.setFixedSize(38, 38)
         btn.setCursor(QtCore.Qt.PointingHandCursor)
         btn.setStyleSheet(f"""
             QPushButton {{ 
-                background-color: rgba(255, 255, 255, 0.8); 
+                background-color: rgba(255, 255, 255, 0.9); 
                 color: {color}; 
-                font-size: 20px; 
-                border-radius: 21px;
-                border: none;
+                font-size: 16px; 
+                border-radius: 19px;
+                border: 1px solid rgba(0,0,0,0.08);
             }} 
             QPushButton:hover {{ 
                 background-color: #ffffff;
-                border: 1px solid {color}40;
+                border: 1px solid {color}50;
             }}
             QPushButton:pressed {{
                 background-color: {color}15;
@@ -1075,8 +1261,14 @@ class MainView(QtWidgets.QMainWindow):
         
         self.btn_add_group.hide()
         self.header_name_label.setText("Chọn một người để chat")
+        if hasattr(self, 'header_status_dot'): self.header_status_dot.hide()
         self.header_status_label.hide()
+        if hasattr(self, 'header_avatar'): 
+            self.header_avatar.setText("👤")
+            self.header_avatar.setStyleSheet("background-color: #e8e8e8; border-radius: 22px; font-size: 18px;")
         if hasattr(self, 'btn_call_header'): self.btn_call_header.hide()
+        if hasattr(self, 'btn_video_call'): self.btn_video_call.hide()
+        if hasattr(self, 'btn_notes'): self.btn_notes.hide()
         self.load_users()
 
     def switch_to_group_mode(self):
@@ -1099,8 +1291,14 @@ class MainView(QtWidgets.QMainWindow):
         
         self.btn_add_group.show()
         self.header_name_label.setText("Chọn một nhóm để chat")
+        if hasattr(self, 'header_status_dot'): self.header_status_dot.hide()
         self.header_status_label.hide()
+        if hasattr(self, 'header_avatar'): 
+            self.header_avatar.setText("👥")
+            self.header_avatar.setStyleSheet("background-color: #e8e8e8; border-radius: 22px; font-size: 18px;")
         if hasattr(self, 'btn_call_header'): self.btn_call_header.hide()
+        if hasattr(self, 'btn_video_call'): self.btn_video_call.hide()
+        if hasattr(self, 'btn_notes'): self.btn_notes.hide()
         if hasattr(self, 'btn_add_member'): self.btn_add_member.hide()
         if hasattr(self, 'btn_leave_group'): self.btn_leave_group.hide()
         self.load_groups()
@@ -1265,25 +1463,60 @@ class MainView(QtWidgets.QMainWindow):
         self.current_chat_id = target_id # Set current chat ID
         self.current_mode = item_type # Set current mode
 
-        icon = "👥" if item_type == "group" else "💬"
-        self.header_name_label.setText(f"{icon} {display_name}")
+        # Cập nhật header name (không cần icon nữa vì có avatar)
+        self.header_name_label.setText(display_name)
+        
+        # Cập nhật header avatar
+        avatar = None
+        if item_type == "user":
+            avatar = self.user_avatars.get(target_id)
+        # Set avatar
+        if avatar:
+            try:
+                pix = QtGui.QPixmap()
+                pix.loadFromData(base64.b64decode(avatar))
+                rounded = QtGui.QPixmap(45, 45)
+                rounded.fill(QtCore.Qt.GlobalColor.transparent)
+                painter = QtGui.QPainter(rounded)
+                painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
+                path = QtGui.QPainterPath()
+                path.addEllipse(0, 0, 45, 45)
+                painter.setClipPath(path)
+                painter.drawPixmap(0, 0, pix.scaled(45, 45, QtCore.Qt.AspectRatioMode.KeepAspectRatioByExpanding, QtCore.Qt.TransformationMode.SmoothTransformation))
+                painter.end()
+                self.header_avatar.setPixmap(rounded)
+                self.header_avatar.setStyleSheet("background-color: transparent;")
+            except:
+                self.header_avatar.setText("👤")
+                self.header_avatar.setStyleSheet("background-color: #e8e8e8; border-radius: 22px; font-size: 18px;")
+        else:
+            self.header_avatar.setText("👥" if item_type == "group" else "👤")
+            self.header_avatar.setStyleSheet("background-color: #e8e8e8; border-radius: 22px; font-size: 18px;")
         
         # Cập nhật trạng thái hiển thị trên Header (chỉ cho mode user)
         if item_type == "user":
             status = self.user_statuses.get(target_id, "offline")
             self.update_header_status_display(target_id, status)
         else:
+            self.header_status_dot.hide()
             self.header_status_label.hide()
 
-
-        # Ẩn nút gọi cho logic nhóm
+        # Hiện/Ẩn các nút action tùy theo mode
         if item_type == "group":
+            # Ẩn các nút chat 1-1
             if hasattr(self, 'btn_call_header'): self.btn_call_header.hide()
+            if hasattr(self, 'btn_video_call'): self.btn_video_call.hide()
+            if hasattr(self, 'btn_notes'): self.btn_notes.hide()
+            # Hiện các nút nhóm
             if hasattr(self, 'btn_add_member'): self.btn_add_member.show()
             if hasattr(self, 'btn_view_members'): self.btn_view_members.show()
             if hasattr(self, 'btn_leave_group'): self.btn_leave_group.show()
         else:
+            # Hiện các nút chat 1-1
             if hasattr(self, 'btn_call_header'): self.btn_call_header.show()
+            if hasattr(self, 'btn_video_call'): self.btn_video_call.show()
+            if hasattr(self, 'btn_notes'): self.btn_notes.show()
+            # Ẩn các nút nhóm
             if hasattr(self, 'btn_add_member'): self.btn_add_member.hide()
             if hasattr(self, 'btn_view_members'): self.btn_view_members.hide()
             if hasattr(self, 'btn_leave_group'): self.btn_leave_group.hide()
@@ -2100,9 +2333,12 @@ class MainView(QtWidgets.QMainWindow):
     def update_header_status_display(self, user_id, status):
         """Cập nhật nhãn trạng thái trên header chat."""
         if status == "online":
-            self.header_status_label.setText("<span style='color: #2ecc71;'>● Đang hoạt động</span>")
+            self.header_status_dot.show()
+            self.header_status_label.setText("Online")
+            self.header_status_label.setStyleSheet("font-size: 13px; color: #22c55e;")
             self.header_status_label.show()
         else:
+            self.header_status_dot.hide()
             last_active = self.last_active_times.get(user_id)
             if last_active:
                 # Chuyển đổi timestamp string sang định dạng dễ đọc
@@ -2125,12 +2361,15 @@ class MainView(QtWidgets.QMainWindow):
                         time_str = dt_object.strftime("%H:%M %d/%m") # VD: 10:30 27/10
                     
                     self.header_status_label.setText(f"Hoạt động {time_str}")
+                    self.header_status_label.setStyleSheet("font-size: 13px; color: #6b7280;")
                     self.header_status_label.show()
                 except ValueError:
                     self.header_status_label.setText("Offline")
+                    self.header_status_label.setStyleSheet("font-size: 13px; color: #6b7280;")
                     self.header_status_label.show()
             else:
                 self.header_status_label.setText("Offline")
+                self.header_status_label.setStyleSheet("font-size: 13px; color: #6b7280;")
                 self.header_status_label.show()
 
     def display_incoming_message(self, message, sender_name, message_type, target_id, sender_id=None, sender_avatar=None, is_system=False, file_data=None, file_size=0):
@@ -2163,15 +2402,20 @@ class MainView(QtWidgets.QMainWindow):
                     try:
                         pix = QtGui.QPixmap()
                         pix.loadFromData(base64.b64decode(self.self_avatar))
-                        # Tạo avatar tròn cho sidebar
-                        rounded = QtGui.QPixmap(50, 50)
+                        # Tạo avatar tròn cho sidebar (56x56 để khớp với sidebar_avatar size mới)
+                        size = 56
+                        rounded = QtGui.QPixmap(size, size)
                         rounded.fill(QtCore.Qt.GlobalColor.transparent)
                         painter = QtGui.QPainter(rounded)
-                        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+                        painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
                         path = QtGui.QPainterPath()
-                        path.addEllipse(0, 0, 50, 50)
+                        path.addEllipse(0, 0, size, size)
                         painter.setClipPath(path)
-                        painter.drawPixmap(0, 0, pix.scaled(50, 50, QtCore.Qt.AspectRatioMode.KeepAspectRatioByExpanding, QtCore.Qt.TransformationMode.SmoothTransformation))
+                        # Scale và center ảnh
+                        scaled = pix.scaled(size, size, QtCore.Qt.AspectRatioMode.KeepAspectRatioByExpanding, QtCore.Qt.TransformationMode.SmoothTransformation)
+                        x = (scaled.width() - size) // 2
+                        y = (scaled.height() - size) // 2
+                        painter.drawPixmap(0, 0, scaled, x, y, size, size)
                         painter.end()
                         self.sidebar_avatar.setPixmap(rounded)
                     except:

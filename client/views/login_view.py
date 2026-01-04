@@ -12,7 +12,7 @@ class LoginView(QtWidgets.QWidget):
         self.app = app
         self.controller = None  # Biến lưu controller
         self.setWindowTitle("Đăng nhập - Chat App")
-        self.setGeometry(100, 100, 450, 550)
+        self.setFixedSize(450, 620)
         
         # Center on screen
         qr = self.frameGeometry()
@@ -48,23 +48,23 @@ class LoginView(QtWidgets.QWidget):
         container.setMinimumWidth(420)
 
         container_layout = QtWidgets.QVBoxLayout(container)
-        container_layout.setContentsMargins(50, 50, 50, 50)
-        container_layout.setSpacing(12)
+        container_layout.setContentsMargins(40, 30, 40, 30)
+        container_layout.setSpacing(8)
 
         # Logo/Icon
         icon_label = QtWidgets.QLabel("💬")
         icon_label.setStyleSheet("""
-            font-size: 64px; 
+            font-size: 36px; 
             background: transparent;
-            padding: 15px;
+            padding: 5px;
         """)
         icon_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         container_layout.addWidget(icon_label)
 
-        # Title - Larger and bolder
+        # Title
         title = QtWidgets.QLabel("Đăng nhập")
         title.setStyleSheet("""
-            font-size: 38px;
+            font-size: 22px;
             font-weight: 700;
             color: #ffffff;
             background: transparent;
@@ -74,25 +74,24 @@ class LoginView(QtWidgets.QWidget):
 
         subtitle = QtWidgets.QLabel("Chào mừng bạn trở lại!")
         subtitle.setStyleSheet("""
-            font-size: 16px;
+            font-size: 12px;
             color: rgba(255, 255, 255, 0.7);
             background: transparent;
-            margin-bottom: 15px;
+            margin-bottom: 5px;
         """)
         subtitle.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         container_layout.addWidget(subtitle)
 
-        container_layout.addSpacing(25)
+        container_layout.addSpacing(10)
 
         # Email input label
         email_label = QtWidgets.QLabel("Email")
         email_label.setStyleSheet("""
-            font-size: 14px; 
+            font-size: 11px; 
             font-weight: 600;
-color: rgba(255, 255, 255, 0.9); 
+            color: rgba(255, 255, 255, 0.9); 
             background: transparent;
-            margin-left: 5px;
-            margin-bottom: 5px;
+            margin-left: 3px;
         """)
         container_layout.addWidget(email_label)
 
@@ -100,10 +99,10 @@ color: rgba(255, 255, 255, 0.9);
         self.email_input.setPlaceholderText("example@email.com")
         self.email_input.setStyleSheet("""
             QLineEdit {
-                padding: 16px 20px;
-                font-size: 16px;
+                padding: 10px 12px;
+                font-size: 12px;
                 border: none;
-                border-radius: 10px;
+                border-radius: 8px;
                 background-color: rgba(255, 255, 255, 0.12);
                 color: #ffffff;
             }
@@ -116,29 +115,28 @@ color: rgba(255, 255, 255, 0.9);
         """)
         container_layout.addWidget(self.email_input)
 
-        container_layout.addSpacing(15)
+        container_layout.addSpacing(8)
 
         # Password input label
         password_label = QtWidgets.QLabel("Mật khẩu")
         password_label.setStyleSheet("""
-            font-size: 14px; 
+            font-size: 11px; 
             font-weight: 600; 
             color: rgba(255, 255, 255, 0.9); 
             background: transparent;
-            margin-left: 5px;
-            margin-bottom: 5px;
+            margin-left: 3px;
         """)
         container_layout.addWidget(password_label)
 
         self.password_input = QtWidgets.QLineEdit()
         self.password_input.setEchoMode(QtWidgets.QLineEdit.EchoMode.Password)
-        self.password_input.setPlaceholderText("Nhập mật khẩu của bạn")
+        self.password_input.setPlaceholderText("Nhập mật khẩu")
         self.password_input.setStyleSheet("""
             QLineEdit {
-                padding: 16px 20px;
-                font-size: 16px;
+                padding: 10px 12px;
+                font-size: 12px;
                 border: none;
-                border-radius: 10px;
+                border-radius: 8px;
                 background-color: rgba(255, 255, 255, 0.12);
                 color: #ffffff;
             }
@@ -156,15 +154,15 @@ color: rgba(255, 255, 255, 0.9);
         self.status_label = QtWidgets.QLabel("")
         self.status_label.setStyleSheet("""
             color: #ff6b6b; 
-            font-size: 14px; 
+            font-size: 11px; 
             background: transparent;
-            padding: 8px;
+            padding: 3px;
         """)
         self.status_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.status_label.setWordWrap(True)
         container_layout.addWidget(self.status_label)
 
-        container_layout.addSpacing(20)
+        container_layout.addSpacing(10)
 
         # Login button
         self.login_button = QtWidgets.QPushButton("Đăng nhập")
@@ -172,11 +170,11 @@ color: rgba(255, 255, 255, 0.9);
             QPushButton {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                     stop:0 #6c63ff, stop:1 #4834d4);
-color: white;
+                color: white;
                 border: none;
-                border-radius: 10px;
-                padding: 18px;
-                font-size: 17px;
+                border-radius: 8px;
+                padding: 10px;
+                font-size: 13px;
                 font-weight: 600;
             }
             QPushButton:hover {
@@ -192,7 +190,7 @@ color: white;
         self.login_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
         container_layout.addWidget(self.login_button)
 
-        container_layout.addSpacing(15)
+        container_layout.addSpacing(8)
 
         # Divider
         divider_layout = QtWidgets.QHBoxLayout()
@@ -204,9 +202,9 @@ color: white;
         or_label = QtWidgets.QLabel("hoặc")
         or_label.setStyleSheet("""
             color: rgba(255, 255, 255, 0.6); 
-            font-size: 14px; 
+            font-size: 11px; 
             background: transparent; 
-            padding: 0 20px;
+            padding: 0 10px;
         """)
         divider_layout.addWidget(or_label)
 
@@ -217,7 +215,7 @@ color: white;
 
         container_layout.addLayout(divider_layout)
 
-        container_layout.addSpacing(15)
+        container_layout.addSpacing(8)
 
         # Register button
         self.register_button = QtWidgets.QPushButton("Tạo tài khoản mới")
@@ -226,9 +224,9 @@ color: white;
                 background-color: rgba(255, 255, 255, 0.1);
                 color: #ffffff;
                 border: none;
-                border-radius: 10px;
-                padding: 18px;
-                font-size: 17px;
+                border-radius: 8px;
+                padding: 10px;
+                font-size: 13px;
                 font-weight: 600;
             }
             QPushButton:hover {

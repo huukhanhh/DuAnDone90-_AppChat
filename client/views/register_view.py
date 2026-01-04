@@ -12,7 +12,7 @@ class RegisterView(QtWidgets.QWidget):
         super().__init__()
         self.app = app
         self.setWindowTitle("Đăng ký - Chat App")
-        self.setGeometry(100, 100, 450, 650)
+        self.setFixedSize(450, 720)
         
         # Center on screen
         qr = self.frameGeometry()
@@ -48,23 +48,23 @@ class RegisterView(QtWidgets.QWidget):
         container.setMinimumWidth(420)
 
         container_layout = QtWidgets.QVBoxLayout(container)
-        container_layout.setContentsMargins(50, 40, 50, 40)
-        container_layout.setSpacing(10)
+        container_layout.setContentsMargins(40, 25, 40, 25)
+        container_layout.setSpacing(6)
 
         # Logo/Icon
         icon_label = QtWidgets.QLabel("✨")
         icon_label.setStyleSheet("""
-            font-size: 56px; 
+            font-size: 32px; 
             background: transparent;
-            padding: 10px;
+            padding: 3px;
         """)
         icon_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         container_layout.addWidget(icon_label)
 
-        # Title - Larger and bolder
+        # Title
         title = QtWidgets.QLabel("Tạo tài khoản")
         title.setStyleSheet("""
-            font-size: 36px;
+            font-size: 20px;
             font-weight: 700;
             color: #ffffff;
             background: transparent;
@@ -74,25 +74,24 @@ class RegisterView(QtWidgets.QWidget):
 
         subtitle = QtWidgets.QLabel("Tham gia cùng chúng tôi!")
         subtitle.setStyleSheet("""
-            font-size: 16px;
+            font-size: 11px;
             color: rgba(255, 255, 255, 0.7);
             background: transparent;
-            margin-bottom: 10px;
+            margin-bottom: 3px;
         """)
         subtitle.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         container_layout.addWidget(subtitle)
 
-        container_layout.addSpacing(20)
+        container_layout.addSpacing(8)
 
         # Display Name input
         name_label = QtWidgets.QLabel("Tên hiển thị")
         name_label.setStyleSheet("""
-            font-size: 14px; 
+            font-size: 11px; 
             font-weight: 600; 
             color: rgba(255, 255, 255, 0.9); 
             background: transparent;
-margin-left: 5px;
-            margin-bottom: 3px;
+            margin-left: 3px;
         """)
         container_layout.addWidget(name_label)
 
@@ -101,17 +100,16 @@ margin-left: 5px;
         self.name_input.setStyleSheet(self._get_input_style())
         container_layout.addWidget(self.name_input)
 
-        container_layout.addSpacing(12)
+        container_layout.addSpacing(6)
 
         # Email input
         email_label = QtWidgets.QLabel("Email")
         email_label.setStyleSheet("""
-            font-size: 14px; 
+            font-size: 11px; 
             font-weight: 600; 
             color: rgba(255, 255, 255, 0.9); 
             background: transparent;
-            margin-left: 5px;
-            margin-bottom: 3px;
+            margin-left: 3px;
         """)
         container_layout.addWidget(email_label)
 
@@ -120,17 +118,16 @@ margin-left: 5px;
         self.email_input.setStyleSheet(self._get_input_style())
         container_layout.addWidget(self.email_input)
 
-        container_layout.addSpacing(12)
+        container_layout.addSpacing(6)
 
         # Password input
         password_label = QtWidgets.QLabel("Mật khẩu")
         password_label.setStyleSheet("""
-            font-size: 14px; 
+            font-size: 11px; 
             font-weight: 600; 
             color: rgba(255, 255, 255, 0.9); 
             background: transparent;
-            margin-left: 5px;
-            margin-bottom: 3px;
+            margin-left: 3px;
         """)
         container_layout.addWidget(password_label)
 
@@ -140,17 +137,16 @@ margin-left: 5px;
         self.password_input.setStyleSheet(self._get_input_style())
         container_layout.addWidget(self.password_input)
 
-        container_layout.addSpacing(12)
+        container_layout.addSpacing(6)
 
         # Confirm Password input
         confirm_label = QtWidgets.QLabel("Xác nhận mật khẩu")
         confirm_label.setStyleSheet("""
-            font-size: 14px; 
+            font-size: 11px; 
             font-weight: 600; 
             color: rgba(255, 255, 255, 0.9); 
             background: transparent;
-            margin-left: 5px;
-            margin-bottom: 3px;
+            margin-left: 3px;
         """)
         container_layout.addWidget(confirm_label)
 
@@ -165,15 +161,15 @@ margin-left: 5px;
         self.status_label = QtWidgets.QLabel("")
         self.status_label.setStyleSheet("""
             color: #ff6b6b; 
-            font-size: 14px; 
+            font-size: 10px; 
             background: transparent;
-            padding: 5px;
+            padding: 2px;
         """)
         self.status_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-self.status_label.setWordWrap(True)
+        self.status_label.setWordWrap(True)
         container_layout.addWidget(self.status_label)
 
-        container_layout.addSpacing(15)
+        container_layout.addSpacing(6)
 
         # Register button
         self.register_button = QtWidgets.QPushButton("Đăng ký")
@@ -183,9 +179,9 @@ self.status_label.setWordWrap(True)
                     stop:0 #6c63ff, stop:1 #4834d4);
                 color: white;
                 border: none;
-                border-radius: 10px;
-                padding: 16px;
-                font-size: 17px;
+                border-radius: 8px;
+                padding: 10px;
+                font-size: 12px;
                 font-weight: 600;
             }
             QPushButton:hover {
@@ -201,7 +197,7 @@ self.status_label.setWordWrap(True)
         self.register_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
         container_layout.addWidget(self.register_button)
 
-        container_layout.addSpacing(12)
+        container_layout.addSpacing(6)
 
         # Divider
         divider_layout = QtWidgets.QHBoxLayout()
@@ -213,9 +209,9 @@ self.status_label.setWordWrap(True)
         or_label = QtWidgets.QLabel("hoặc")
         or_label.setStyleSheet("""
             color: rgba(255, 255, 255, 0.6); 
-            font-size: 14px; 
+            font-size: 10px; 
             background: transparent; 
-            padding: 0 20px;
+            padding: 0 10px;
         """)
         divider_layout.addWidget(or_label)
 
@@ -226,7 +222,7 @@ self.status_label.setWordWrap(True)
 
         container_layout.addLayout(divider_layout)
 
-        container_layout.addSpacing(12)
+        container_layout.addSpacing(6)
 
         # Back to login button
         self.back_button = QtWidgets.QPushButton("Đã có tài khoản? Đăng nhập")
@@ -235,9 +231,9 @@ self.status_label.setWordWrap(True)
                 background-color: rgba(255, 255, 255, 0.1);
                 color: #ffffff;
                 border: none;
-                border-radius: 10px;
-                padding: 16px;
-                font-size: 16px;
+                border-radius: 8px;
+                padding: 10px;
+                font-size: 12px;
                 font-weight: 600;
             }
             QPushButton:hover {
@@ -248,7 +244,7 @@ self.status_label.setWordWrap(True)
             }
         """)
         self.back_button.clicked.connect(self.go_to_login)
-self.back_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
+        self.back_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
         container_layout.addWidget(self.back_button)
 
         # Center container in main layout
@@ -265,10 +261,10 @@ self.back_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCurso
     def _get_input_style(self):
         return """
             QLineEdit {
-                padding: 14px 18px;
-                font-size: 16px;
+                padding: 8px 10px;
+                font-size: 11px;
                 border: none;
-                border-radius: 10px;
+                border-radius: 6px;
                 background-color: rgba(255, 255, 255, 0.12);
                 color: #ffffff;
             }
@@ -329,7 +325,7 @@ self.back_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCurso
             while len(resp_data) < resp_length:
                 chunk = client_socket.recv(min(resp_length - len(resp_data), 4096))
                 if not chunk:
-raise socket.error("Kết nối bị đóng")
+                    raise socket.error("Kết nối bị đóng")
                 resp_data += chunk
             response = json.loads(resp_data.decode('utf-8'))
             client_socket.close()
