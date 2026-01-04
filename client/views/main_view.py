@@ -23,6 +23,7 @@ from client.views.create_group_dialog import CreateGroupDialog
 from client.views.ai_chat_view import AIChatView
 from client.views.call_dialog import IncomingCallDialog, ActiveCallDialog
 from client.controllers.moderation_controller import ClientModerationController
+from client.views.notification_toast import NotificationManager
 from config.config import BADWORDS_PATH
 
 
@@ -414,6 +415,7 @@ class MainView(QtWidgets.QMainWindow):
     status_updated_signal = QtCore.Signal(int, str) # uid, status
     signal_received = QtCore.Signal(dict) # Tín hiệu mới cho các sự kiện P2P
     force_logout_signal = QtCore.Signal(str)  # message - Tín hiệu bị đăng xuất từ thiết bị khác
+    show_notification_signal = QtCore.Signal(int, str, str, str, str, object, object)  # sender_id, sender_name, avatar, content, msg_type, group_id, moderation
 
     def __init__(self, app, controller, user_id, display_name):
         super().__init__()
@@ -492,11 +494,15 @@ class MainView(QtWidgets.QMainWindow):
         self.new_group_signal.connect(self.load_groups)
         self.signal_received.connect(self.on_signal_received) # Connect new signal
         self.force_logout_signal.connect(self.handle_force_logout)  # Single Session Enforcement
+        
+        # Notification Manager (Toast Notifications)
+        self.notification_manager = NotificationManager(self)
+        self.show_notification_signal.connect(self._show_toast_notification)
+        self.notification_manager.notification_clicked.connect(self._on_notification_clicked)
 
         self.current_receiver_id = None
         self.current_receiver_name = None
         self.self_avatar = None
-        self.self_is_invisible = False
         self.user_avatars = {}
         self.user_names = {}  # Cache tên hiển thị của user
         self.user_statuses = {} # Cache trạng thái online/offline
@@ -1608,6 +1614,13 @@ class MainView(QtWidgets.QMainWindow):
                     if should_display:
                         # Truyền cả sender_id và sender_avatar để hiển thị đúng
                         self.message_received.emit(content, sender_name, t, target_id_for_signal, sender_id, sender_avatar, is_system, file_data, file_size)
+                    else:
+                        # Show toast notification for messages from other chats
+                        moderation = msg.get('moderation')  # May contain {action, final_text}
+                        self.show_notification_signal.emit(
+                            sender_id, sender_name, sender_avatar, 
+                            content, t, group_id, moderation
+                        )
             except Exception as e:
                 if self._message_check_running:
                     print(f"Error checking messages: {e}")
@@ -1852,7 +1865,6 @@ class MainView(QtWidgets.QMainWindow):
             if resp.get('status') == 'success':
                 self.display_name = resp.get('display_name', self.display_name)
                 self.self_avatar = resp.get('avatar')
-                self.self_is_invisible = resp.get('is_invisible', False)
                 if self.self_avatar:
                     try:
                         pix = QtGui.QPixmap()
@@ -1975,7 +1987,7 @@ class MainView(QtWidgets.QMainWindow):
                 QtWidgets.QMessageBox.critical(self, "Lỗi", resp.get("message", "Lỗi rời nhóm"))
 
     def open_profile_dialog(self):
-        d = ProfileDialog(self.controller, self.display_name, self.self_avatar, self.self_is_invisible, self)
+        d = ProfileDialog(self.controller, self.display_name, self.self_avatar, self)
         if d.exec():
             # Lưu lại thông tin chat hiện tại
             saved_receiver_id = self.current_receiver_id
@@ -2072,3 +2084,29 @@ class MainView(QtWidgets.QMainWindow):
         if self.controller:
             self.controller.stop()
         event.accept()
+
+    # =====================================================
+    # TOAST NOTIFICATION HANDLERS
+    # =====================================================
+    @QtCore.Slot(int, str, str, str, str, object, object)
+    def _show_toast_notification(self, sender_id, sender_name, sender_avatar, 
+                                  content, msg_type, group_id, moderation):
+        """Show toast notification for messages from other chats."""
+        self.notification_manager.show_notification(
+            sender_id, sender_name, sender_avatar,
+            content, msg_type, group_id, moderation
+        )
+    
+    @QtCore.Slot(int, str)
+    def _on_notification_clicked(self, target_id, mode):
+        """Handle click on toast notification - navigate to the chat."""
+        # Get display name from cache
+        display_name = self.user_names.get(target_id, "Unknown")
+        
+        # Use existing method to select and load chat
+        item_type = "group" if mode == "group" else "user"
+        self.select_chat_by_id(target_id, display_name, item_type)
+        
+        # Bring window to front
+        self.raise_()
+        self.activateWindow()

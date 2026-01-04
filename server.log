@@ -535,3 +535,152 @@
 2026-01-02 20:34:30,767 - DEBUG - Message saved: 5 -> 7 (CallLog: False)
 2026-01-02 20:34:35,874 - DEBUG - Message saved: 7 -> 5 (CallLog: False)
 2026-01-02 20:34:46,973 - DEBUG - Message saved: 5 -> 7 (CallLog: False)
+2026-01-02 20:40:04,911 - INFO - Database connection established
+2026-01-02 20:40:04,912 - INFO - UserModel initialized successfully
+2026-01-02 20:40:04,912 - INFO - Moderation controller initialized
+2026-01-02 20:40:36,832 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-02 20:40:37,051 - INFO - User logged in: my@gmail.com
+2026-01-02 20:40:49,079 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-02 20:40:49,288 - INFO - User logged in: huuhoan@gmail.com
+2026-01-02 20:41:15,253 - ERROR - Server Loop Error: 'ServerController' object has no attribute 'broadcast_to_all'
+2026-01-02 20:41:15,271 - INFO - User 7 disconnected - broadcast sent
+2026-01-02 20:41:15,272 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-02 20:41:15,273 - INFO - Resume session success for User 7. Sockets: [5, 7]
+2026-01-02 20:41:58,516 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-02 20:41:58,725 - INFO - User logged in: huuhoan@gmail.com
+2026-01-02 20:44:06,608 - INFO - Database connection established
+2026-01-02 20:44:06,608 - INFO - UserModel initialized successfully
+2026-01-02 20:44:06,608 - INFO - Moderation controller initialized
+2026-01-02 20:44:14,629 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-02 20:44:14,859 - INFO - User logged in: my@gmail.com
+2026-01-02 20:44:27,043 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-02 20:44:27,269 - INFO - User logged in: huuhoan@gmail.com
+2026-01-02 20:44:48,285 - INFO - User 5 disconnected - broadcast sent
+2026-01-02 20:44:52,292 - INFO - User 7 disconnected - broadcast sent
+2026-01-02 20:44:57,696 - INFO - Database connection established
+2026-01-02 20:44:57,696 - INFO - UserModel initialized successfully
+2026-01-02 20:44:57,696 - INFO - Moderation controller initialized
+2026-01-02 20:45:04,090 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-02 20:45:04,310 - INFO - User logged in: my@gmail.com
+2026-01-02 20:45:18,083 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-02 20:45:18,289 - INFO - User logged in: huuhoan@gmail.com
+2026-01-02 20:45:50,485 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2026-01-02 20:45:51,054 - DEBUG - https://huggingface.co:443 "HEAD /christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new/resolve/main/config.json HTTP/1.1" 307 0
+2026-01-02 20:45:51,083 - DEBUG - https://huggingface.co:443 "HEAD /api/resolve-cache/models/christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new/4c1817d86a0ec69588db3ae74336023b7d1033ec/config.json HTTP/1.1" 200 0
+2026-01-02 20:49:52,875 - INFO - Database connection established
+2026-01-02 20:49:52,876 - INFO - UserModel initialized successfully
+2026-01-02 20:49:52,876 - INFO - Moderation controller initialized
+2026-01-02 20:50:00,143 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-02 20:50:00,356 - INFO - User logged in: my@gmail.com
+2026-01-02 20:50:16,813 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-02 20:50:17,026 - INFO - User logged in: huuhoan@gmail.com
+2026-01-02 20:51:15,165 - INFO - User 5 disconnected - broadcast sent
+2026-01-02 20:51:16,529 - INFO - User 7 disconnected - broadcast sent
+2026-01-02 20:55:22,853 - INFO - Database connection established
+2026-01-02 20:55:22,853 - INFO - UserModel initialized successfully
+2026-01-02 20:55:22,853 - INFO - Moderation controller initialized
+2026-01-02 20:55:37,449 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-02 20:55:37,680 - INFO - User logged in: my@gmail.com
+2026-01-02 20:55:54,417 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-02 20:55:54,636 - INFO - User logged in: huuhoan@gmail.com
+2026-01-02 20:55:56,882 - INFO - User 7 disconnected - broadcast sent
+2026-01-02 20:56:01,950 - INFO - User 5 disconnected - broadcast sent
+2026-01-02 21:06:10,086 - INFO - Database connection established
+2026-01-02 21:06:10,086 - INFO - UserModel initialized successfully
+2026-01-02 21:06:10,086 - INFO - Moderation controller initialized
+2026-01-02 21:06:17,831 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-02 21:06:18,042 - INFO - User logged in: my@gmail.com
+2026-01-02 21:06:27,678 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-02 21:06:27,899 - INFO - User logged in: huuhoan@gmail.com
+2026-01-02 21:06:50,116 - INFO - User 5 disconnected - broadcast sent
+2026-01-02 21:06:51,764 - INFO - User 7 disconnected - broadcast sent
+2026-01-02 21:17:10,518 - INFO - Database connection established
+2026-01-02 21:17:10,518 - INFO - UserModel initialized successfully
+2026-01-02 21:17:10,518 - INFO - Moderation controller initialized
+2026-01-02 21:17:21,546 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-02 21:17:21,755 - INFO - User logged in: my@gmail.com
+2026-01-02 21:17:45,770 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-02 21:17:45,992 - INFO - User logged in: huuhoan@gmail.com
+2026-01-02 21:18:04,194 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2026-01-02 21:18:04,690 - DEBUG - https://huggingface.co:443 "HEAD /christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new/resolve/main/config.json HTTP/1.1" 307 0
+2026-01-02 21:18:04,718 - DEBUG - https://huggingface.co:443 "HEAD /api/resolve-cache/models/christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new/4c1817d86a0ec69588db3ae74336023b7d1033ec/config.json HTTP/1.1" 200 0
+2026-01-02 21:18:05,261 - DEBUG - https://huggingface.co:443 "GET /api/models/christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new/tree/main/additional_chat_templates?recursive=False&expand=False HTTP/1.1" 404 64
+2026-01-02 21:18:05,563 - DEBUG - https://huggingface.co:443 "GET /api/models/christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new/tree/main?recursive=True&expand=False HTTP/1.1" 200 1709
+2026-01-02 21:18:06,335 - DEBUG - https://huggingface.co:443 "GET /api/models/christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new HTTP/1.1" 200 1899
+2026-01-02 21:18:06,534 - DEBUG - Message saved: 5 -> 7 (CallLog: False)
+2026-01-02 21:18:17,563 - DEBUG - Message saved: 5 -> 7 (CallLog: False)
+2026-01-02 21:18:49,803 - DEBUG - Message saved: 5 -> 7 (CallLog: False)
+2026-01-02 21:18:58,216 - DEBUG - Message saved: 5 -> 7 (CallLog: False)
+2026-01-02 21:19:04,443 - INFO - User 5 disconnected - broadcast sent
+2026-01-02 21:19:05,883 - INFO - User 7 disconnected - broadcast sent
+2026-01-02 22:10:59,662 - INFO - Database connection established
+2026-01-02 22:10:59,662 - INFO - UserModel initialized successfully
+2026-01-02 22:10:59,662 - INFO - Moderation controller initialized
+2026-01-02 22:11:37,229 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-02 22:11:37,866 - INFO - User logged in: my@gmail.com
+2026-01-02 22:12:14,633 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-02 22:12:20,782 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-02 22:12:21,413 - INFO - User logged in: huuhoan@gmail.com
+2026-01-02 22:12:46,821 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2026-01-02 22:12:47,745 - DEBUG - https://huggingface.co:443 "HEAD /christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new/resolve/main/config.json HTTP/1.1" 307 0
+2026-01-02 22:12:47,772 - DEBUG - https://huggingface.co:443 "HEAD /api/resolve-cache/models/christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new/4c1817d86a0ec69588db3ae74336023b7d1033ec/config.json HTTP/1.1" 200 0
+2026-01-02 22:12:49,092 - DEBUG - https://huggingface.co:443 "GET /api/models/christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new/tree/main/additional_chat_templates?recursive=False&expand=False HTTP/1.1" 404 64
+2026-01-02 22:12:49,387 - DEBUG - https://huggingface.co:443 "GET /api/models/christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new/tree/main?recursive=True&expand=False HTTP/1.1" 200 1709
+2026-01-02 22:12:51,344 - DEBUG - https://huggingface.co:443 "GET /api/models/christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new HTTP/1.1" 200 1899
+2026-01-02 22:12:51,806 - DEBUG - Message saved: 5 -> 7 (CallLog: False)
+2026-01-02 22:12:51,945 - DEBUG - Message saved: 5 -> 7 (CallLog: False)
+2026-01-02 22:12:52,122 - DEBUG - Message saved: 5 -> 7 (CallLog: False)
+2026-01-02 22:12:58,447 - DEBUG - Message saved: 5 -> 7 (CallLog: False)
+2026-01-02 22:13:04,999 - DEBUG - Message saved: 5 -> 7 (CallLog: False)
+2026-01-02 22:13:19,770 - DEBUG - Message saved: 7 -> 5 (CallLog: False)
+2026-01-02 22:13:42,532 - DEBUG - Message saved: 7 -> 5 (CallLog: False)
+2026-01-02 22:14:05,291 - DEBUG - Message saved: 5 -> 7 (CallLog: False)
+2026-01-02 22:17:11,549 - INFO - Database connection established
+2026-01-02 22:17:11,549 - INFO - UserModel initialized successfully
+2026-01-02 22:17:11,549 - INFO - Moderation controller initialized
+2026-01-02 22:17:23,149 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-02 22:17:23,778 - INFO - User logged in: my@gmail.com
+2026-01-02 22:17:41,929 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-02 22:17:42,555 - INFO - User logged in: bo@gmail.com
+2026-01-02 22:18:05,073 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2026-01-02 22:18:05,942 - DEBUG - https://huggingface.co:443 "HEAD /christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new/resolve/main/config.json HTTP/1.1" 307 0
+2026-01-02 22:18:05,966 - DEBUG - https://huggingface.co:443 "HEAD /api/resolve-cache/models/christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new/4c1817d86a0ec69588db3ae74336023b7d1033ec/config.json HTTP/1.1" 200 0
+2026-01-02 22:18:06,821 - DEBUG - https://huggingface.co:443 "GET /api/models/christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new/tree/main/additional_chat_templates?recursive=False&expand=False HTTP/1.1" 404 64
+2026-01-02 22:18:07,121 - DEBUG - https://huggingface.co:443 "GET /api/models/christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new/tree/main?recursive=True&expand=False HTTP/1.1" 200 1709
+2026-01-02 22:18:08,782 - DEBUG - https://huggingface.co:443 "GET /api/models/christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new HTTP/1.1" 200 1899
+2026-01-02 22:18:09,284 - DEBUG - Message saved: 6 -> 5 (CallLog: False)
+2026-01-02 22:18:09,432 - DEBUG - Message saved: 6 -> 5 (CallLog: False)
+2026-01-02 22:18:09,583 - DEBUG - Message saved: 6 -> 5 (CallLog: False)
+2026-01-02 22:18:09,896 - DEBUG - Message saved: 6 -> 5 (CallLog: False)
+2026-01-02 22:18:22,460 - DEBUG - Message saved: 5 -> 6 (CallLog: False)
+2026-01-02 22:18:30,991 - DEBUG - Message saved: 5 -> 6 (CallLog: False)
+2026-01-02 22:18:42,486 - DEBUG - Message saved: 5 -> 6 (CallLog: False)
+2026-01-02 22:19:33,855 - DEBUG - Message saved: 5 -> 6 (CallLog: False)
+2026-01-02 22:20:09,752 - DEBUG - Message saved: 5 -> 6 (CallLog: False)
+2026-01-02 22:20:24,065 - DEBUG - Message saved: 5 -> 6 (CallLog: False)
+2026-01-04 20:12:30,285 - INFO - Database connection established
+2026-01-04 20:12:30,285 - INFO - UserModel initialized successfully
+2026-01-04 20:12:30,286 - INFO - Moderation controller initialized
+2026-01-04 20:13:09,192 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-04 20:13:09,847 - INFO - User logged in: my@gmail.com
+2026-01-04 20:13:23,207 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-04 20:13:23,848 - INFO - User logged in: bo@gmail.com
+2026-01-04 20:13:26,609 - INFO - User 6 disconnected - broadcast sent
+2026-01-04 20:13:46,886 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-04 20:13:47,512 - INFO - User logged in: bo@gmail.com
+2026-01-04 20:14:19,981 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2026-01-04 20:14:20,868 - DEBUG - https://huggingface.co:443 "HEAD /christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new/resolve/main/config.json HTTP/1.1" 307 0
+2026-01-04 20:14:20,889 - DEBUG - https://huggingface.co:443 "HEAD /api/resolve-cache/models/christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new/4c1817d86a0ec69588db3ae74336023b7d1033ec/config.json HTTP/1.1" 200 0
+2026-01-04 20:14:21,392 - DEBUG - https://huggingface.co:443 "GET /api/models/christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new/tree/main/additional_chat_templates?recursive=False&expand=False HTTP/1.1" 404 64
+2026-01-04 20:14:21,711 - DEBUG - https://huggingface.co:443 "GET /api/models/christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new/tree/main?recursive=True&expand=False HTTP/1.1" 200 1709
+2026-01-04 20:14:23,584 - DEBUG - https://huggingface.co:443 "GET /api/models/christinacdl/XLM_RoBERTa-Offensive-Language-Detection-8-langs-new HTTP/1.1" 200 1899
+2026-01-04 20:14:24,076 - DEBUG - Message saved: 5 -> 6 (CallLog: False)
+2026-01-04 20:14:24,212 - DEBUG - Message saved: 5 -> 6 (CallLog: False)
+2026-01-04 20:14:24,354 - DEBUG - Message saved: 5 -> 6 (CallLog: False)
+2026-01-04 20:14:41,987 - DEBUG - Message saved: 6 -> 5 (CallLog: False)
+2026-01-04 20:15:00,686 - DEBUG - Message saved: 5 -> 6 (CallLog: False)
+2026-01-04 20:15:18,197 - INFO - User 6 disconnected - broadcast sent
+2026-01-04 20:15:29,879 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-04 20:15:30,554 - INFO - User logged in: bo@gmail.com
+2026-01-04 20:15:39,506 - INFO - User 6 disconnected - broadcast sent
+2026-01-04 20:15:41,337 - INFO - User 5 disconnected - broadcast sent

@@ -215,54 +215,27 @@ class ServerController:
                     elif action == "update_profile":
                         uid = self.clients.get(client_socket)
                         if uid:
-                            # 1. Get current state to compare
-                            # old_profile_data = self.user_ctrl.get_profile(uid) # Optional optimization
-                            
-                            is_invisible_req = request.get("is_invisible")
-                            
-                            # 2. Call controller to update DB
+                            # Call controller to update DB
                             response = self.user_ctrl.update_profile(
                                 uid, 
                                 request.get("display_name"), 
                                 request.get("avatar"), 
                                 request.get("old_password"), 
-                                request.get("new_password"),
-                                is_invisible_req
+                                request.get("new_password")
                             )
                             
                             if response["status"] == "success":
-                                is_invisible_db = response.get("is_invisible") # Assuming controller/model *could* return this, but currently it returns generic success msg. 
-                                # We rely on the request or re-fetching profile.
-                                
-                                # Update RAM Visibility if changed
-                                if is_invisible_req is not None:
-                                    # Convert to bool to be safe
-                                    new_is_invisible = bool(is_invisible_req)
-                                    with self.lock:
-                                        # Currently, if invisible is True -> visibility is False
-                                        old_visibility = self.user_visibility.get(uid, True)
-                                        current_visibility = not new_is_invisible
-                                        self.user_visibility[uid] = current_visibility
-                                        
-                                        # Compare and Broadcast Status Change
-                                        if old_visibility != current_visibility:
-                                            if current_visibility: # Invisible -> Visible
-                                                self.broadcast_user_status(uid, "online")
-                                            else: # Visible -> Invisible (Offline)
-                                                # Update last active time for fake offline
-                                                ts = self.model.update_last_active(uid)
-                                                self.broadcast_user_status(uid, "offline", str(ts) if ts else None)
-
                                 # Broadcast Profile Update (Display Name / Avatar)
-                                # We re-fetch profile to get the latest DB state
-                                new_profile = self.user_ctrl.get_profile(uid)
-                                noti_data = {
-                                    "action": "profile_update_notification",
-                                    "user_id": uid,
-                                    "display_name": new_profile.get("display_name")
-                                    # We could include avatar hash here too if needed
-                                }
-                                self.broadcast_to_all(noti_data) # Use helper if available, else loop
+                                try:
+                                    new_profile = self.user_ctrl.get_profile(uid)
+                                    noti_data = {
+                                        "action": "profile_update_notification",
+                                        "user_id": uid,
+                                        "display_name": new_profile.get("display_name")
+                                    }
+                                    self.broadcast_to_all(noti_data)
+                                except Exception as e:
+                                    logger.error(f"Error broadcasting profile update: {e}")
                                 
                             self.send_to_client(client_socket, response)
 
@@ -605,13 +578,27 @@ class ServerController:
             "status": status,
             "last_active_at": last_active_at
         }
+        # Copy socket list inside lock (fast)
+        sockets_to_send = []
         with self.lock:
             for uid, sock in self.user_sockets.items():
-                # Do not send to the user whose status is being updated if they are the one disconnecting
-                # or if the client should handle its own status update.
-                # The original code had `if uid != user_id:`, let's keep that logic.
                 if uid != user_id:
-                    self.send_to_client(sock, notification)
+                    sockets_to_send.append(sock)
+        
+        # Send OUTSIDE lock (slow but non-blocking)
+        for sock in sockets_to_send:
+            self.send_to_client(sock, notification)
+
+    def broadcast_to_all(self, data, exclude_uid=None):
+        """Broadcast data to all connected clients (optionally excluding one user)."""
+        sockets_to_send = []
+        with self.lock:
+            for uid, sock in self.user_sockets.items():
+                if exclude_uid is None or uid != exclude_uid:
+                    sockets_to_send.append(sock)
+        
+        for sock in sockets_to_send:
+            self.send_to_client(sock, data)
 
     def start(self):
         print(f"Server started on port {SERVER_CONFIG['port']}")
