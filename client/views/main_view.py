@@ -110,39 +110,145 @@ class ChatListItem(QtWidgets.QWidget):
             self.status_dot.hide()
 
 
+class WaveformWidget(QtWidgets.QWidget):
+    """Custom waveform visualization widget"""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.progress = 0  # 0-100
+        self.bars = [0.3, 0.5, 0.8, 0.6, 0.9, 0.4, 0.7, 0.5, 0.8, 0.3, 0.6, 0.9, 0.5, 0.7, 0.4, 0.8, 0.6, 0.3, 0.7, 0.5]
+        self.setMinimumHeight(30)
+        self.setCursor(QtCore.Qt.PointingHandCursor)
+        
+    def setProgress(self, value):
+        self.progress = max(0, min(100, value))
+        self.update()
+        
+    def paintEvent(self, event):
+        painter = QtGui.QPainter(self)
+        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+        
+        w = self.width()
+        h = self.height()
+        bar_count = len(self.bars)
+        bar_width = max(3, (w - (bar_count - 1) * 2) // bar_count)
+        spacing = 2
+        
+        progress_x = (self.progress / 100) * w
+        
+        for i, bar_height_ratio in enumerate(self.bars):
+            x = i * (bar_width + spacing)
+            bar_h = int(h * bar_height_ratio * 0.8)
+            y = (h - bar_h) // 2
+            
+            # Color based on progress
+            if x < progress_x:
+                painter.setBrush(QtGui.QColor("#ffffff"))
+            else:
+                painter.setBrush(QtGui.QColor(255, 255, 255, 100))
+            
+            painter.setPen(QtCore.Qt.NoPen)
+            painter.drawRoundedRect(int(x), y, bar_width, bar_h, 2, 2)
+        
+        painter.end()
+
+    def mousePressEvent(self, event):
+        if event.button() == QtCore.Qt.LeftButton:
+            self.progress = int((event.position().x() / self.width()) * 100)
+            self.update()
+            self.parent().seek_to_progress(self.progress)
+
+
 class VoiceMessageWidget(QtWidgets.QWidget):
+    """Voice message with glassmorphism, gradient play button, waveform visualization"""
     def __init__(self, voice_data, is_self=False, parent=None):
         super().__init__(parent)
         self.voice_data = voice_data
+        self.is_self = is_self
         self.is_playing = False
+        self.total_duration = 0
         self.audio_player = QtMultimedia.QMediaPlayer()
+        self.audio_output = QtMultimedia.QAudioOutput()
+        self.audio_player.setAudioOutput(self.audio_output)
+        self.audio_output.setVolume(1.0)
         self.temp_file = None
+        
+        # Glassmorphism pill-shaped bubble
+        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.setStyleSheet("""
+            VoiceMessageWidget {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, 
+                    stop:0 rgba(102, 126, 234, 0.9), 
+                    stop:1 rgba(118, 75, 162, 0.9));
+                border-radius: 25px;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+            }
+        """)
+        
         layout = QtWidgets.QHBoxLayout(self)
-        layout.setContentsMargins(10, 5, 10, 5)
-        layout.setSpacing(8)
+        layout.setContentsMargins(8, 8, 12, 8)
+        layout.setSpacing(10)
+        
+        # Gradient circular play button (35px)
         self.play_button = QtWidgets.QPushButton("▶")
-        self.play_button.setFixedSize(24, 24)
-        self.play_button.setStyleSheet(
-            "QPushButton { background-color: rgba(255,255,255,0.3); border: none; border-radius: 12px; color: white; } QPushButton:hover { background-color: rgba(255,255,255,0.5); }")
+        self.play_button.setFixedSize(35, 35)
+        self.play_button.setCursor(QtCore.Qt.PointingHandCursor)
+        self.play_button.setStyleSheet("""
+            QPushButton { 
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, 
+                    stop:0 #ffffff, stop:1 #e0e0e0);
+                border: none; 
+                border-radius: 17px; 
+                color: #667eea; 
+                font-size: 14px;
+                font-weight: bold;
+                padding-left: 2px;
+            } 
+            QPushButton:hover { 
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, 
+                    stop:0 #f0f0f0, stop:1 #d0d0d0);
+            }
+            QPushButton:pressed {
+                background: #d0d0d0;
+            }
+        """)
         self.play_button.clicked.connect(self.toggle_play)
         layout.addWidget(self.play_button)
-        self.progress_bar = QtWidgets.QProgressBar()
-        self.progress_bar.setFixedHeight(4)
-        self.progress_bar.setTextVisible(False)
-        self.progress_bar.setStyleSheet(
-            "QProgressBar { border: none; background-color: rgba(0,0,0,0.1); border-radius: 2px; } QProgressBar::chunk { background-color: white; border-radius: 2px; }")
-        layout.addWidget(self.progress_bar)
+        
+        # Waveform visualization
+        self.waveform = WaveformWidget(self)
+        self.waveform.setFixedHeight(30)
+        layout.addWidget(self.waveform, 1)
+        
+        # Duration label - white text
         self.time_label = QtWidgets.QLabel("0:00")
-        self.time_label.setStyleSheet("color: #eee; font-size: 10px;")
+        self.time_label.setStyleSheet("""
+            color: #ffffff; 
+            font-size: 12px; 
+            font-weight: bold;
+            background: transparent;
+        """)
+        self.time_label.setFixedWidth(36)
         layout.addWidget(self.time_label)
+        
+        # Connections
         self.progress_timer = QtCore.QTimer()
         self.progress_timer.timeout.connect(self.update_progress)
         self.audio_player.positionChanged.connect(self.on_position_changed)
         self.audio_player.durationChanged.connect(self.on_duration_changed)
-        self.audio_player.stateChanged.connect(self.on_state_changed)
-        self.setFixedHeight(40);
-        self.setFixedWidth(200);
-        self.setStyleSheet("background: transparent;")
+        self.audio_player.playbackStateChanged.connect(self.on_state_changed)
+        
+        # Size - fill available space
+        self.setFixedHeight(50)
+        self.setMinimumWidth(180)
+        self.setMaximumWidth(300)
+
+    def seek_to_progress(self, progress):
+        """Called by waveform when clicked"""
+        if self.total_duration > 0:
+            pos = int((progress / 100) * self.total_duration)
+            self.audio_player.setPosition(pos)
+            if not self.is_playing:
+                self.play_voice()
 
     def toggle_play(self):
         if not self.is_playing:
@@ -157,7 +263,8 @@ class VoiceMessageWidget(QtWidgets.QWidget):
                 import tempfile
                 temp_dir = tempfile.gettempdir()
                 self.temp_file = os.path.join(temp_dir, f"temp_voice_{id(self)}.wav")
-                with open(self.temp_file, 'wb') as f: f.write(audio_bytes)
+                with open(self.temp_file, 'wb') as f: 
+                    f.write(audio_bytes)
             self.audio_player.setSource(QtCore.QUrl.fromLocalFile(self.temp_file))
             self.audio_player.play()
         except Exception as e:
@@ -167,14 +274,17 @@ class VoiceMessageWidget(QtWidgets.QWidget):
         self.audio_player.stop()
 
     def on_position_changed(self, position):
-        if self.audio_player.duration() > 0:
-            progress = int((position / self.audio_player.duration()) * 100)
-            self.progress_bar.setValue(progress)
+        if self.total_duration > 0:
+            progress = int((position / self.total_duration) * 100)
+            self.waveform.setProgress(progress)
             seconds = position // 1000
             self.time_label.setText(f"{seconds // 60}:{seconds % 60:02d}")
 
     def on_duration_changed(self, duration):
-        if duration > 0: self.progress_bar.setMaximum(100)
+        if duration > 0:
+            self.total_duration = duration
+            seconds = duration // 1000
+            self.time_label.setText(f"{seconds // 60}:{seconds % 60:02d}")
 
     def on_state_changed(self, state):
         if state == QtMultimedia.QMediaPlayer.PlaybackState.PlayingState:
@@ -186,19 +296,21 @@ class VoiceMessageWidget(QtWidgets.QWidget):
             self.play_button.setText("▶")
             self.progress_timer.stop()
             if state == QtMultimedia.QMediaPlayer.PlaybackState.StoppedState:
-                self.progress_bar.setValue(0)
-                self.time_label.setText("0:00")
+                self.waveform.setProgress(0)
+                if self.total_duration > 0:
+                    seconds = self.total_duration // 1000
+                    self.time_label.setText(f"{seconds // 60}:{seconds % 60:02d}")
 
     def update_progress(self):
-        if self.audio_player.duration() > 0:
+        if self.total_duration > 0:
             pos = self.audio_player.position()
-            dur = self.audio_player.duration()
-            self.progress_bar.setValue(int((pos / dur) * 100))
+            self.waveform.setProgress(int((pos / self.total_duration) * 100))
 
     def cleanup(self):
         if self.temp_file and os.path.exists(self.temp_file):
             try:
-                if self.audio_player.playbackState() == QtMultimedia.QMediaPlayer.PlaybackState.PlayingState: self.audio_player.stop()
+                if self.audio_player.playbackState() == QtMultimedia.QMediaPlayer.PlaybackState.PlayingState:
+                    self.audio_player.stop()
                 os.remove(self.temp_file)
             except:
                 pass
@@ -1332,8 +1444,7 @@ class MainView(QtWidgets.QMainWindow):
             content_layout.addWidget(lbl_name)
         if is_voice:
             msg_widget = VoiceMessageWidget(message, is_self)
-            msg_widget.setStyleSheet(
-                f"background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 {'#667eea' if is_self else '#fff'}, stop:1 {'#764ba2' if is_self else '#fff'}); border-radius: 15px; border: 1px solid {'#667eea' if is_self else '#ddd'};")
+            # VoiceMessageWidget has its own styling built-in
             content_layout.addWidget(msg_widget)
         elif is_video:
             msg_widget = VideoMessageWidget(message, is_self)

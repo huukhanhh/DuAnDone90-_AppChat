@@ -27,40 +27,46 @@ class RegisterView(QtWidgets.QWidget):
         main_layout = QtWidgets.QVBoxLayout()
         main_layout.setContentsMargins(0, 0, 0, 0)
 
-        # Background gradient
+        # Dark gradient background
         self.setStyleSheet("""
             QWidget {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #f093fb, stop:0.5 #f5576c, stop:1 #ffd6a5);
+                    stop:0 #0f0c29, stop:0.5 #302b63, stop:1 #24243e);
+                font-family: 'Segoe UI', Arial, sans-serif;
             }
         """)
 
-        # Container với bo góc
+        # Container - no border, transparent background
         container = QtWidgets.QWidget()
         container.setStyleSheet("""
             QWidget {
-                background-color: rgba(255, 255, 255, 0.95);
-                border-radius: 25px;
+                background-color: transparent;
+                border: none;
             }
         """)
-        container.setMaximumWidth(400)
+        container.setMaximumWidth(480)
+        container.setMinimumWidth(420)
 
         container_layout = QtWidgets.QVBoxLayout(container)
-        container_layout.setContentsMargins(30, 30, 30, 30)
+        container_layout.setContentsMargins(50, 40, 50, 40)
         container_layout.setSpacing(10)
 
         # Logo/Icon
         icon_label = QtWidgets.QLabel("✨")
-        icon_label.setStyleSheet("font-size: 50px; background: transparent;")
+        icon_label.setStyleSheet("""
+            font-size: 56px; 
+            background: transparent;
+            padding: 10px;
+        """)
         icon_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         container_layout.addWidget(icon_label)
 
-        # Title
+        # Title - Larger and bolder
         title = QtWidgets.QLabel("Tạo tài khoản")
         title.setStyleSheet("""
-            font-size: 28px;
-            font-weight: bold;
-            color: #2c3e50;
+            font-size: 36px;
+            font-weight: 700;
+            color: #ffffff;
             background: transparent;
         """)
         title.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
@@ -68,18 +74,26 @@ class RegisterView(QtWidgets.QWidget):
 
         subtitle = QtWidgets.QLabel("Tham gia cùng chúng tôi!")
         subtitle.setStyleSheet("""
-            font-size: 14px;
-            color: #7f8c8d;
+            font-size: 16px;
+            color: rgba(255, 255, 255, 0.7);
             background: transparent;
+            margin-bottom: 10px;
         """)
         subtitle.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         container_layout.addWidget(subtitle)
 
-        container_layout.addSpacing(10)
+        container_layout.addSpacing(20)
 
         # Display Name input
-        name_label = QtWidgets.QLabel("👤 Tên hiển thị")
-        name_label.setStyleSheet("font-size: 13px; font-weight: bold; color: #2c3e50; background: transparent;")
+        name_label = QtWidgets.QLabel("Tên hiển thị")
+        name_label.setStyleSheet("""
+            font-size: 14px; 
+            font-weight: 600; 
+            color: rgba(255, 255, 255, 0.9); 
+            background: transparent;
+            margin-left: 5px;
+            margin-bottom: 3px;
+        """)
         container_layout.addWidget(name_label)
 
         self.name_input = QtWidgets.QLineEdit()
@@ -87,9 +101,18 @@ class RegisterView(QtWidgets.QWidget):
         self.name_input.setStyleSheet(self._get_input_style())
         container_layout.addWidget(self.name_input)
 
+        container_layout.addSpacing(12)
+
         # Email input
-        email_label = QtWidgets.QLabel("📧 Email")
-        email_label.setStyleSheet("font-size: 13px; font-weight: bold; color: #2c3e50; background: transparent;")
+        email_label = QtWidgets.QLabel("Email")
+        email_label.setStyleSheet("""
+            font-size: 14px; 
+            font-weight: 600; 
+            color: rgba(255, 255, 255, 0.9); 
+            background: transparent;
+            margin-left: 5px;
+            margin-bottom: 3px;
+        """)
         container_layout.addWidget(email_label)
 
         self.email_input = QtWidgets.QLineEdit()
@@ -97,9 +120,18 @@ class RegisterView(QtWidgets.QWidget):
         self.email_input.setStyleSheet(self._get_input_style())
         container_layout.addWidget(self.email_input)
 
+        container_layout.addSpacing(12)
+
         # Password input
-        password_label = QtWidgets.QLabel("🔒 Mật khẩu")
-        password_label.setStyleSheet("font-size: 13px; font-weight: bold; color: #2c3e50; background: transparent;")
+        password_label = QtWidgets.QLabel("Mật khẩu")
+        password_label.setStyleSheet("""
+            font-size: 14px; 
+            font-weight: 600; 
+            color: rgba(255, 255, 255, 0.9); 
+            background: transparent;
+            margin-left: 5px;
+            margin-bottom: 3px;
+        """)
         container_layout.addWidget(password_label)
 
         self.password_input = QtWidgets.QLineEdit()
@@ -108,9 +140,18 @@ class RegisterView(QtWidgets.QWidget):
         self.password_input.setStyleSheet(self._get_input_style())
         container_layout.addWidget(self.password_input)
 
+        container_layout.addSpacing(12)
+
         # Confirm Password input
-        confirm_label = QtWidgets.QLabel("🔐 Xác nhận mật khẩu")
-        confirm_label.setStyleSheet("font-size: 13px; font-weight: bold; color: #2c3e50; background: transparent;")
+        confirm_label = QtWidgets.QLabel("Xác nhận mật khẩu")
+        confirm_label.setStyleSheet("""
+            font-size: 14px; 
+            font-weight: 600; 
+            color: rgba(255, 255, 255, 0.9); 
+            background: transparent;
+            margin-left: 5px;
+            margin-bottom: 3px;
+        """)
         container_layout.addWidget(confirm_label)
 
         self.confirm_password_input = QtWidgets.QLineEdit()
@@ -122,75 +163,88 @@ class RegisterView(QtWidgets.QWidget):
 
         # Status label
         self.status_label = QtWidgets.QLabel("")
-        self.status_label.setStyleSheet("color: #e74c3c; font-size: 12px; background: transparent;")
+        self.status_label.setStyleSheet("""
+            color: #ff6b6b; 
+            font-size: 14px; 
+            background: transparent;
+            padding: 5px;
+        """)
         self.status_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.status_label.setWordWrap(True)
         container_layout.addWidget(self.status_label)
 
-        container_layout.addSpacing(5)
+        container_layout.addSpacing(15)
 
         # Register button
         self.register_button = QtWidgets.QPushButton("Đăng ký")
         self.register_button.setStyleSheet("""
             QPushButton {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #f093fb, stop:1 #f5576c);
+                    stop:0 #6c63ff, stop:1 #4834d4);
                 color: white;
                 border: none;
-                border-radius: 15px;
-                padding: 14px;
-                font-size: 16px;
-                font-weight: bold;
+                border-radius: 10px;
+                padding: 16px;
+                font-size: 17px;
+                font-weight: 600;
             }
             QPushButton:hover {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #f5576c, stop:1 #f093fb);
+                    stop:0 #7c74ff, stop:1 #5a45e8);
             }
             QPushButton:pressed {
-                padding: 15px 13px 13px 15px;
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #5b52e0, stop:1 #3d28c4);
             }
         """)
         self.register_button.clicked.connect(self.register)
         self.register_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
         container_layout.addWidget(self.register_button)
 
+        container_layout.addSpacing(12)
+
         # Divider
         divider_layout = QtWidgets.QHBoxLayout()
         line1 = QtWidgets.QFrame()
         line1.setFrameShape(QtWidgets.QFrame.Shape.HLine)
-        line1.setStyleSheet("background-color: #e0e0e0;")
+        line1.setStyleSheet("background-color: rgba(255, 255, 255, 0.2); max-height: 1px; border: none;")
         divider_layout.addWidget(line1)
 
         or_label = QtWidgets.QLabel("hoặc")
-        or_label.setStyleSheet("color: #7f8c8d; font-size: 12px; background: transparent; padding: 0 10px;")
+        or_label.setStyleSheet("""
+            color: rgba(255, 255, 255, 0.6); 
+            font-size: 14px; 
+            background: transparent; 
+            padding: 0 20px;
+        """)
         divider_layout.addWidget(or_label)
 
         line2 = QtWidgets.QFrame()
         line2.setFrameShape(QtWidgets.QFrame.Shape.HLine)
-        line2.setStyleSheet("background-color: #e0e0e0;")
+        line2.setStyleSheet("background-color: rgba(255, 255, 255, 0.2); max-height: 1px; border: none;")
         divider_layout.addWidget(line2)
 
         container_layout.addLayout(divider_layout)
 
-        # Back to log in button
+        container_layout.addSpacing(12)
+
+        # Back to login button
         self.back_button = QtWidgets.QPushButton("Đã có tài khoản? Đăng nhập")
         self.back_button.setStyleSheet("""
             QPushButton {
-                background-color: white;
-                color: #f093fb;
-                border: 2px solid #f093fb;
-                border-radius: 15px;
-                padding: 14px;
+                background-color: rgba(255, 255, 255, 0.1);
+                color: #ffffff;
+                border: none;
+                border-radius: 10px;
+                padding: 16px;
                 font-size: 16px;
-                font-weight: bold;
+                font-weight: 600;
             }
             QPushButton:hover {
-                background-color: #f8f9fa;
-                border-color: #f5576c;
-                color: #f5576c;
+                background-color: rgba(255, 255, 255, 0.18);
             }
             QPushButton:pressed {
-                background-color: #e9ecef;
+                background-color: rgba(255, 255, 255, 0.25);
             }
         """)
         self.back_button.clicked.connect(self.go_to_login)
@@ -211,15 +265,18 @@ class RegisterView(QtWidgets.QWidget):
     def _get_input_style(self):
         return """
             QLineEdit {
-                padding: 12px 15px;
-                font-size: 14px;
-                border: 2px solid #e0e0e0;
-                border-radius: 15px;
-                background-color: white;
-                color: #2c3e50;
+                padding: 14px 18px;
+                font-size: 16px;
+                border: none;
+                border-radius: 10px;
+                background-color: rgba(255, 255, 255, 0.12);
+                color: #ffffff;
             }
             QLineEdit:focus {
-                border: 2px solid #f093fb;
+                background-color: rgba(255, 255, 255, 0.18);
+            }
+            QLineEdit::placeholder {
+                color: rgba(255, 255, 255, 0.45);
             }
         """
 
@@ -278,7 +335,7 @@ class RegisterView(QtWidgets.QWidget):
             client_socket.close()
 
             if response.get("status") == "success":
-                self.status_label.setStyleSheet("color: #27ae60; font-size: 12px; background: transparent;")
+                self.status_label.setStyleSheet("color: #4ade80; font-size: 12px; background: transparent; padding: 3px;")
                 self.status_label.setText("Đăng ký thành công!")
 
                 # Show success message
@@ -304,7 +361,7 @@ class RegisterView(QtWidgets.QWidget):
 
                 self.app.show_login()
             else:
-                self.status_label.setStyleSheet("color: #e74c3c; font-size: 12px; background: transparent;")
+                self.status_label.setStyleSheet("color: #ff6b6b; font-size: 12px; background: transparent; padding: 3px;")
                 self.status_label.setText(f"{response.get('message')}")
 
         except socket.error as e:
