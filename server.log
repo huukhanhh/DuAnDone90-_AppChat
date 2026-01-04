@@ -684,3 +684,17 @@
 2026-01-04 20:15:30,554 - INFO - User logged in: bo@gmail.com
 2026-01-04 20:15:39,506 - INFO - User 6 disconnected - broadcast sent
 2026-01-04 20:15:41,337 - INFO - User 5 disconnected - broadcast sent
+2026-01-04 20:25:51,388 - INFO - Database connection established
+2026-01-04 20:25:51,388 - INFO - UserModel initialized successfully
+2026-01-04 20:25:51,388 - INFO - Moderation controller initialized
+2026-01-04 20:26:03,412 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-04 20:26:04,055 - INFO - User logged in: my@gmail.com
+2026-01-04 20:32:45,608 - INFO - Database connection established
+2026-01-04 20:32:45,608 - INFO - UserModel initialized successfully
+2026-01-04 20:32:45,609 - INFO - Moderation controller initialized
+2026-01-04 20:33:00,318 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-04 20:33:00,984 - INFO - User logged in: my@gmail.com
+2026-01-04 20:34:52,972 - INFO - User 5 disconnected - broadcast sent
+2026-01-04 20:35:11,721 - INFO - Phiên client m\u1edbi b\u1eaft \u0111\u1ea7u
+2026-01-04 20:35:12,378 - INFO - User logged in: my@gmail.com
+2026-01-04 20:35:30,092 - INFO - User 5 disconnected - broadcast sent
