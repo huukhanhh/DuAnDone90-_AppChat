@@ -12,6 +12,7 @@ from server.controllers.user_controller import UserController
 from server.controllers.chat_controller import ChatController
 from server.controllers.group_controller import GroupController
 from server.controllers.moderation_controller import ServerModerationController
+from server.controllers.face_auth_controller import FaceAuthController
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -47,6 +48,10 @@ class ServerController:
             # Khởi tạo Moderation Controller
             self.mod_ctrl = ServerModerationController(BADWORDS_PATH)
             logger.info("Moderation controller initialized")
+            
+            # Khởi tạo FaceAuth Controller
+            self.face_auth_ctrl = FaceAuthController()
+            logger.info("FaceAuth controller initialized")
             
         except Exception as e:
             logger.error(f"Cannot initialize model/controllers: {str(e)}")
@@ -167,6 +172,64 @@ class ServerController:
                                 del self.offline_messages[user_id]
 
                             # Broadcast USER_ONLINE nếu user KHÔNG ẩn danh
+                            if self.user_visibility[user_id]:
+                                self.broadcast_user_status(user_id, "online")
+                    
+                    # FACE_LOGIN - New login method via FaceID
+                    elif action == "FACE_LOGIN":
+                        response = self.face_auth_ctrl.handle_face_login(client_socket, request, self)
+                        if response.get("status") == "success":
+                            # === SAME SESSION ESTABLISHMENT AS PASSWORD LOGIN ===
+                            user_id = int(response.get("user_id"))
+                            is_invisible = response.get("is_invisible", False)
+                            
+                            old_socket_to_close = None
+                            
+                            with self.lock:
+                                # Kick old session if exists
+                                if user_id in self.user_sockets:
+                                    old_socket = self.user_sockets[user_id]
+                                    try:
+                                        force_logout_packet = {
+                                            "action": "force_logout",
+                                            "message": "Tài khoản đã đăng nhập từ thiết bị khác."
+                                        }
+                                        self.send_to_client(old_socket, force_logout_packet)
+                                        logger.info(f"[FACE_LOGIN] Sent force_logout to old session of user {user_id}")
+                                    except Exception as e:
+                                        logger.warning(f"Could not send force_logout: {e}")
+                                    
+                                    if old_socket in self.clients:
+                                        del self.clients[old_socket]
+                                    old_socket_to_close = old_socket
+                                    logger.info(f"[FACE_LOGIN] Kicked old session of user {user_id}")
+                                
+                                # Register new session
+                                self.clients[client_socket] = user_id
+                                self.user_sockets[user_id] = client_socket
+                                self.user_visibility[user_id] = False if is_invisible else True
+                                self.model.update_last_active(user_id)
+                            
+                            # Close old socket outside lock
+                            if old_socket_to_close:
+                                try:
+                                    old_socket_to_close.shutdown(socket.SHUT_RDWR)
+                                except:
+                                    pass
+                                try:
+                                    old_socket_to_close.close()
+                                except:
+                                    pass
+                            
+                            print(f"[DEBUG FACE_LOGIN] Registered user_id={user_id}. user_sockets={list(self.user_sockets.keys())}")
+                            
+                            # Send offline messages
+                            if user_id in self.offline_messages:
+                                for msg in self.offline_messages[user_id]:
+                                    self.send_to_client(client_socket, msg)
+                                del self.offline_messages[user_id]
+                            
+                            # Broadcast USER_ONLINE if visible
                             if self.user_visibility[user_id]:
                                 self.broadcast_user_status(user_id, "online")
                                 
@@ -492,6 +555,16 @@ class ServerController:
                                     response = {"status": "success"}
                                 else:
                                     response = {"status": "error", "code": "USER_OFFLINE"}
+
+                    # 6. FACE AUTH (FaceID Enrollment Management)
+                    elif action in ["FACE_STATUS", "FACE_ENROLL", "FACE_DISABLE"]:
+                        uid = self.clients.get(client_socket)
+                        if action == "FACE_STATUS":
+                            response = self.face_auth_ctrl.handle_face_status(uid, request)
+                        elif action == "FACE_ENROLL":
+                            response = self.face_auth_ctrl.handle_face_enroll(uid, request)
+                        elif action == "FACE_DISABLE":
+                            response = self.face_auth_ctrl.handle_face_disable(uid, request)
 
                     # Respond
                     print(f"[DEBUG response] Sending response to client: action={action}, status={response.get('status') if response else 'None'}")

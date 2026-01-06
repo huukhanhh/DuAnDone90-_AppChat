@@ -9,9 +9,12 @@ class ProfileDialog(QtWidgets.QDialog):
         self.controller = controller
         self.setWindowTitle("Cập nhật thông tin cá nhân")
         self.setModal(False)
-        self.resize(420, 520)
+        self.resize(420, 650)  # Tăng chiều cao để chứa FaceID section
 
         self.avatar_base64 = current_avatar_base64
+        
+        # FaceID enrollment data (pending)
+        self._pending_face_data = None
 
         layout = QtWidgets.QVBoxLayout(self)
 
@@ -42,6 +45,73 @@ class ProfileDialog(QtWidgets.QDialog):
         form.addRow("Nhập lại mật khẩu", self.new_password2_edit)
         layout.addLayout(form)
 
+        # ============================================================
+        # FaceID Section
+        # ============================================================
+        layout.addSpacing(10)
+        
+        # Separator line
+        separator = QtWidgets.QFrame()
+        separator.setFrameShape(QtWidgets.QFrame.Shape.HLine)
+        separator.setStyleSheet("background-color: #ddd;")
+        layout.addWidget(separator)
+        
+        layout.addSpacing(5)
+        
+        # FaceID title
+        faceid_title = QtWidgets.QLabel("🔐 FaceID")
+        faceid_title.setStyleSheet("font-size: 16px; font-weight: bold; color: #1a73e8;")
+        layout.addWidget(faceid_title)
+        
+        # FaceID status label
+        self.faceid_status_label = QtWidgets.QLabel("Đang kiểm tra...")
+        self.faceid_status_label.setStyleSheet("font-size: 13px; color: #666; margin-left: 5px;")
+        layout.addWidget(self.faceid_status_label)
+        
+        # FaceID buttons
+        faceid_btns = QtWidgets.QHBoxLayout()
+        faceid_btns.setSpacing(10)
+        
+        self.btn_enroll_face = QtWidgets.QPushButton("📷 Thiết lập / Cập nhật FaceID")
+        self.btn_enroll_face.setStyleSheet("""
+            QPushButton {
+                background-color: #1a73e8;
+                color: white;
+                font-size: 12px;
+                padding: 8px 15px;
+                border: none;
+                border-radius: 5px;
+            }
+            QPushButton:hover { background-color: #1557b0; }
+            QPushButton:disabled { background-color: #ccc; }
+        """)
+        self.btn_enroll_face.clicked.connect(self._on_enroll_face_clicked)
+        
+        self.btn_disable_face = QtWidgets.QPushButton("🚫 Tắt FaceID")
+        self.btn_disable_face.setStyleSheet("""
+            QPushButton {
+                background-color: #f5f5f5;
+                color: #666;
+                font-size: 12px;
+                padding: 8px 15px;
+                border: 1px solid #ddd;
+                border-radius: 5px;
+            }
+            QPushButton:hover { background-color: #e0e0e0; }
+            QPushButton:disabled { background-color: #f9f9f9; color: #bbb; }
+        """)
+        self.btn_disable_face.clicked.connect(self._on_disable_face_clicked)
+        
+        faceid_btns.addWidget(self.btn_enroll_face)
+        faceid_btns.addWidget(self.btn_disable_face)
+        faceid_btns.addStretch()
+        layout.addLayout(faceid_btns)
+        
+        layout.addSpacing(10)
+        # ============================================================
+        # End FaceID Section
+        # ============================================================
+
         # Status label
         self.status_label = QtWidgets.QLabel("")
         self.status_label.setStyleSheet("color:#e74c3c")
@@ -53,6 +123,120 @@ class ProfileDialog(QtWidgets.QDialog):
         self.save_btn.clicked.connect(self.save_changes)
         btns.addStretch(); btns.addWidget(self.save_btn)
         layout.addLayout(btns)
+
+    def showEvent(self, event):
+        """Called when dialog is shown. Fetch FaceID status."""
+        super().showEvent(event)
+        self._refresh_faceid_status()
+
+    def _refresh_faceid_status(self):
+        """Fetch FACE_STATUS from server and update UI."""
+        try:
+            resp = self.controller.send_request({"action": "FACE_STATUS"})
+            
+            if resp.get("type") == "FACE_STATUS_RESULT" and resp.get("ok"):
+                has_face = resp.get("has_face", False)
+                enabled = resp.get("enabled", False)
+                
+                if not has_face:
+                    self.faceid_status_label.setText("⚪ Chưa thiết lập")
+                    self.faceid_status_label.setStyleSheet("font-size: 13px; color: #666;")
+                    self.btn_disable_face.setEnabled(False)
+                elif enabled:
+                    self.faceid_status_label.setText("🟢 Đang bật")
+                    self.faceid_status_label.setStyleSheet("font-size: 13px; color: #22c55e; font-weight: bold;")
+                    self.btn_disable_face.setEnabled(True)
+                else:
+                    self.faceid_status_label.setText("🔴 Đã tắt")
+                    self.faceid_status_label.setStyleSheet("font-size: 13px; color: #e74c3c;")
+                    self.btn_disable_face.setEnabled(True)
+            else:
+                self.faceid_status_label.setText("⚠️ Không thể kiểm tra trạng thái")
+                self.faceid_status_label.setStyleSheet("font-size: 13px; color: #f59e0b;")
+        except Exception as e:
+            print(f"[ProfileDialog] Error fetching FACE_STATUS: {e}")
+            self.faceid_status_label.setText("⚠️ Lỗi kết nối")
+            self.faceid_status_label.setStyleSheet("font-size: 13px; color: #e74c3c;")
+
+    def _on_enroll_face_clicked(self):
+        """Open FaceEnrollDialog to capture face embedding."""
+        try:
+            from client.ui.face_enroll_dialog import FaceEnrollDialog
+        except ImportError as e:
+            QtWidgets.QMessageBox.critical(
+                self, "Lỗi",
+                f"Không thể mở dialog FaceID: {e}"
+            )
+            return
+        
+        dialog = FaceEnrollDialog(self)
+        dialog.enrollment_complete.connect(self._on_enrollment_complete)
+        dialog.exec()
+
+    @QtCore.Slot(str, int, str, float)
+    def _on_enrollment_complete(self, embedding_b64: str, embedding_dim: int, 
+                                 model_name: str, threshold: float):
+        """Handle completed face enrollment - send to server."""
+        try:
+            # Send FACE_ENROLL to server
+            resp = self.controller.send_request({
+                "action": "FACE_ENROLL",
+                "embedding_b64": embedding_b64,
+                "embedding_dim": embedding_dim,
+                "model_name": model_name,
+                "threshold": threshold
+            })
+            
+            if resp.get("type") == "FACE_ENROLL_RESULT" and resp.get("ok"):
+                QtWidgets.QMessageBox.information(
+                    self, "Thành công",
+                    "Đã thiết lập FaceID thành công!\nBạn có thể đăng nhập bằng khuôn mặt."
+                )
+                self._refresh_faceid_status()
+            else:
+                reason = resp.get("reason", "Unknown error")
+                QtWidgets.QMessageBox.warning(
+                    self, "Thất bại",
+                    f"Không thể thiết lập FaceID: {reason}"
+                )
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(
+                self, "Lỗi",
+                f"Lỗi khi gửi dữ liệu FaceID: {e}"
+            )
+
+    def _on_disable_face_clicked(self):
+        """Disable FaceID for current user."""
+        reply = QtWidgets.QMessageBox.question(
+            self, "Xác nhận",
+            "Bạn có chắc chắn muốn tắt FaceID?\nBạn sẽ không thể đăng nhập bằng khuôn mặt cho đến khi thiết lập lại.",
+            QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
+            QtWidgets.QMessageBox.StandardButton.No
+        )
+        
+        if reply != QtWidgets.QMessageBox.StandardButton.Yes:
+            return
+        
+        try:
+            resp = self.controller.send_request({"action": "FACE_DISABLE"})
+            
+            if resp.get("type") == "FACE_DISABLE_RESULT" and resp.get("ok"):
+                QtWidgets.QMessageBox.information(
+                    self, "Thành công",
+                    "Đã tắt FaceID."
+                )
+                self._refresh_faceid_status()
+            else:
+                reason = resp.get("reason", "Unknown error")
+                QtWidgets.QMessageBox.warning(
+                    self, "Thất bại",
+                    f"Không thể tắt FaceID: {reason}"
+                )
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(
+                self, "Lỗi",
+                f"Lỗi khi tắt FaceID: {e}"
+            )
 
     def _refresh_avatar_preview(self):
         if self.avatar_base64:
@@ -150,5 +334,6 @@ class ProfileDialog(QtWidgets.QDialog):
             self.status_label.setText(f"Lỗi: {str(e)}")
             self.save_btn.setEnabled(True)
             QtWidgets.QMessageBox.critical(self, "Lỗi", f"Không thể cập nhật: {str(e)}")
+
 
 

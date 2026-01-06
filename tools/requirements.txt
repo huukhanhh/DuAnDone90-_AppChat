@@ -1,6 +1,28 @@
+# Chat Application Dependencies
+# Sử dụng: pip install -r requirements.txt
+
+# === GUI Framework ===
 PySide6
+
+# === Database ===
 mysql-connector-python
+
+# === Security ===
 bcrypt
+
+# === AI Chatbot (Gemini) ===
 google-generativeai
 markdown
+
+# === Audio Call ===
 pyaudio
+
+# === AI Content Moderation ===
+transformers
+torch
+
+# === FaceID Recognition ===
+opencv-python
+numpy
+deepface
+tensorflow

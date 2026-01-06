@@ -12,13 +12,19 @@ class LoginView(QtWidgets.QWidget):
         self.app = app
         self.controller = None  # Biến lưu controller
         self.setWindowTitle("Đăng nhập - Chat App")
-        self.setFixedSize(450, 620)
+        self.setFixedSize(450, 680)  # Tăng chiều cao để chứa nút FaceID
         
         # Center on screen
         qr = self.frameGeometry()
         cp = QtGui.QGuiApplication.primaryScreen().availableGeometry().center()
         qr.moveCenter(cp)
         self.move(qr.topLeft())
+        
+        # Pending FaceID login data
+        self._pending_face_email = None
+        self._pending_face_embedding = None
+        self._pending_face_dim = None
+        self._face_login_dialog = None
 
         self.setup_ui()
 
@@ -192,6 +198,37 @@ class LoginView(QtWidgets.QWidget):
 
         container_layout.addSpacing(8)
 
+        # ============================================================
+        # FaceID Login Button
+        # ============================================================
+        self.faceid_login_button = QtWidgets.QPushButton("🔐 Đăng nhập bằng FaceID")
+        self.faceid_login_button.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #00b894, stop:1 #00cec9);
+                color: white;
+                border: none;
+                border-radius: 8px;
+                padding: 10px;
+                font-size: 13px;
+                font-weight: 600;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #00d9a5, stop:1 #00e0db);
+            }
+            QPushButton:pressed {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #009a7d, stop:1 #00b3ae);
+            }
+        """)
+        self.faceid_login_button.clicked.connect(self._on_faceid_login_clicked)
+        self.faceid_login_button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
+        container_layout.addWidget(self.faceid_login_button)
+        # ============================================================
+
+        container_layout.addSpacing(8)
+
         # Divider
         divider_layout = QtWidgets.QHBoxLayout()
         line1 = QtWidgets.QFrame()
@@ -284,18 +321,7 @@ class LoginView(QtWidgets.QWidget):
             print(f"[DEBUG login] Response received: {response}")
 
             if response.get("status") == "success":
-                user_id = response.get("user_id")
-                display_name = response.get("display_name")
-                
-                # Update controller with current user ID for reconnection logic
-                self.controller.current_user_id = user_id
-
-                # 4. TRUYỀN CONTROLLER (đã khởi tạo) SANG MAIN
-                # Lưu ý: Cần chắc chắn bạn đã sửa main.py để nhận tham số này
-                self.app.show_main(self.controller, user_id, display_name)
-
-                # Đóng cửa sổ login (App main sẽ mở)
-                self.close()
+                self._handle_login_success(response)
             else:
                 self.status_label.setText(f"❌ {response.get('message')}")
                 # Nếu login thất bại thì dừng controller để đóng socket, tránh treo
@@ -305,6 +331,131 @@ class LoginView(QtWidgets.QWidget):
             self.status_label.setText(f"❌ Lỗi: {str(e)}")
             if self.controller:
                 self.controller.stop()
+
+    def _handle_login_success(self, response):
+        """
+        Common login success handler - used by both password and FaceID login.
+        """
+        user_id = response.get("user_id")
+        display_name = response.get("display_name")
+        
+        # Update controller with current user ID for reconnection logic
+        self.controller.current_user_id = user_id
+
+        # TRUYỀN CONTROLLER (đã khởi tạo) SANG MAIN
+        self.app.show_main(self.controller, user_id, display_name)
+
+        # Đóng cửa sổ login (App main sẽ mở)
+        self.close()
+
+    # ============================================================
+    # FaceID Login Methods
+    # ============================================================
+    def _on_faceid_login_clicked(self):
+        """Handle FaceID login button click."""
+        email = self.email_input.text().strip()
+        if not email:
+            self.status_label.setText("⚠️ Vui lòng nhập email trước")
+            return
+        
+        # Store email for later use
+        self._pending_face_email = email
+        
+        try:
+            from client.ui.face_login_dialog import FaceLoginDialog
+        except ImportError as e:
+            QtWidgets.QMessageBox.critical(
+                self, "Lỗi",
+                f"Không thể mở dialog FaceID: {e}"
+            )
+            return
+        
+        self._face_login_dialog = FaceLoginDialog(self)
+        self._face_login_dialog.login_embedding_ready.connect(self._on_face_embedding_ready)
+        self._face_login_dialog.exec()
+
+    @QtCore.Slot(str, int)
+    def _on_face_embedding_ready(self, embedding_b64: str, embedding_dim: int):
+        """Handle face embedding ready - send FACE_LOGIN to server."""
+        self._pending_face_embedding = embedding_b64
+        self._pending_face_dim = embedding_dim
+        
+        # Close the dialog
+        if self._face_login_dialog:
+            self._face_login_dialog.accept()
+            self._face_login_dialog = None
+        
+        # Now perform the actual login
+        self._do_face_login()
+
+    def _do_face_login(self):
+        """Send FACE_LOGIN request to server and handle response."""
+        email = self._pending_face_email
+        embedding_b64 = self._pending_face_embedding
+        embedding_dim = self._pending_face_dim
+        
+        if not email or not embedding_b64:
+            self.status_label.setText("❌ Thiếu dữ liệu đăng nhập FaceID")
+            return
+        
+        self.status_label.setText("🔄 Đang xác thực FaceID...")
+        
+        try:
+            print("[DEBUG FaceID] Creating new socket and connecting to server...")
+            # 1. Tạo socket và kết nối
+            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            client_socket.settimeout(5)
+            client_socket.connect((SERVER_CONFIG["host"], SERVER_CONFIG["port"]))
+            client_socket.settimeout(None)
+            print("[DEBUG FaceID] Connected! Creating controller...")
+
+            # 2. Khởi tạo controller
+            self.controller = AuthController(client_socket)
+            print("[DEBUG FaceID] Controller created. Sending FACE_LOGIN request...")
+
+            # 3. Gửi FACE_LOGIN request
+            request = {
+                "action": "FACE_LOGIN",
+                "email": email,
+                "embedding_b64": embedding_b64,
+                "embedding_dim": embedding_dim
+            }
+            response = self.controller.send_request(request)
+            print(f"[DEBUG FaceID] Response received: {response}")
+
+            # 4. Handle response
+            if response.get("status") == "success":
+                self.status_label.setText("")
+                self._handle_login_success(response)
+            else:
+                # Handle error
+                reason = response.get("reason", "UNKNOWN")
+                error_messages = {
+                    "NOT_ENABLED": "Tài khoản chưa bật FaceID.\nHãy đăng nhập bằng mật khẩu rồi bật FaceID trong Profile.",
+                    "NOT_MATCH": "Khuôn mặt không khớp.",
+                    "NOT_FOUND": "Email không tồn tại.",
+                    "DIM_MISMATCH": "Dữ liệu FaceID không tương thích (sai kích thước embedding).",
+                    "LOCKED": "Bạn thử quá nhiều lần.\nVui lòng đợi 30 giây rồi thử lại.",
+                    "BAD_REQUEST": "Thiếu dữ liệu đăng nhập FaceID.",
+                }
+                msg = error_messages.get(reason, f"Lỗi đăng nhập FaceID: {reason}")
+                
+                self.status_label.setText(f"❌ {msg.split(chr(10))[0]}")  # First line only for status
+                QtWidgets.QMessageBox.warning(self, "Đăng nhập thất bại", msg)
+                
+                # Stop controller on failure
+                self.controller.stop()
+
+        except Exception as e:
+            self.status_label.setText(f"❌ Lỗi: {str(e)}")
+            if self.controller:
+                self.controller.stop()
+        finally:
+            # Clear pending data
+            self._pending_face_email = None
+            self._pending_face_embedding = None
+            self._pending_face_dim = None
+    # ============================================================
 
     def go_to_register(self):
         self.app.show_register()

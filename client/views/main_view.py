@@ -683,6 +683,7 @@ class MainView(QtWidgets.QMainWindow):
         self.current_chat_id = None # user_id or group_id
         self.active_call_dialog = None # Theo dõi dialog cuộc gọi đang diễn ra
         self.incoming_dialog = None # Theo dõi dialog cuộc gọi đến
+        self.call_target_id = None  # ID của người đang gọi (để gửi audio)
 
         self.is_recording = False
         self.frames = []
@@ -991,17 +992,6 @@ class MainView(QtWidgets.QMainWindow):
         self.btn_video_call.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
         self.btn_video_call.hide()
         h_layout.addWidget(self.btn_video_call)
-        
-        # Nút Copy/Notes
-        self.btn_notes = QtWidgets.QPushButton("📋")
-        self.btn_notes.setFixedSize(38, 38)
-        self.btn_notes.setStyleSheet("""
-            QPushButton { background-color: #f3f4f6; border-radius: 19px; font-size: 18px; border: none; }
-            QPushButton:hover { background-color: #e5e7eb; }
-        """)
-        self.btn_notes.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
-        self.btn_notes.hide()
-        h_layout.addWidget(self.btn_notes)
 
         # Nút Thêm Thành Viên
         self.btn_add_member = QtWidgets.QPushButton("➕")
@@ -1268,7 +1258,7 @@ class MainView(QtWidgets.QMainWindow):
             self.header_avatar.setStyleSheet("background-color: #e8e8e8; border-radius: 22px; font-size: 18px;")
         if hasattr(self, 'btn_call_header'): self.btn_call_header.hide()
         if hasattr(self, 'btn_video_call'): self.btn_video_call.hide()
-        if hasattr(self, 'btn_notes'): self.btn_notes.hide()
+
         self.load_users()
 
     def switch_to_group_mode(self):
@@ -1298,7 +1288,7 @@ class MainView(QtWidgets.QMainWindow):
             self.header_avatar.setStyleSheet("background-color: #e8e8e8; border-radius: 22px; font-size: 18px;")
         if hasattr(self, 'btn_call_header'): self.btn_call_header.hide()
         if hasattr(self, 'btn_video_call'): self.btn_video_call.hide()
-        if hasattr(self, 'btn_notes'): self.btn_notes.hide()
+
         if hasattr(self, 'btn_add_member'): self.btn_add_member.hide()
         if hasattr(self, 'btn_leave_group'): self.btn_leave_group.hide()
         self.load_groups()
@@ -1506,7 +1496,7 @@ class MainView(QtWidgets.QMainWindow):
             # Ẩn các nút chat 1-1
             if hasattr(self, 'btn_call_header'): self.btn_call_header.hide()
             if hasattr(self, 'btn_video_call'): self.btn_video_call.hide()
-            if hasattr(self, 'btn_notes'): self.btn_notes.hide()
+
             # Hiện các nút nhóm
             if hasattr(self, 'btn_add_member'): self.btn_add_member.show()
             if hasattr(self, 'btn_view_members'): self.btn_view_members.show()
@@ -1515,7 +1505,7 @@ class MainView(QtWidgets.QMainWindow):
             # Hiện các nút chat 1-1
             if hasattr(self, 'btn_call_header'): self.btn_call_header.show()
             if hasattr(self, 'btn_video_call'): self.btn_video_call.show()
-            if hasattr(self, 'btn_notes'): self.btn_notes.show()
+
             # Ẩn các nút nhóm
             if hasattr(self, 'btn_add_member'): self.btn_add_member.hide()
             if hasattr(self, 'btn_view_members'): self.btn_view_members.hide()
@@ -1882,8 +1872,10 @@ class MainView(QtWidgets.QMainWindow):
             return
         
         # 1. Hiện ActiveCallDialog (Trạng thái Người gọi)
+        self.call_target_id = self.current_receiver_id  # Lưu target ID để gửi audio
         self.active_call_dialog = ActiveCallDialog(self.current_receiver_name, self.user_avatars.get(self.current_receiver_id), is_caller=True, parent=self)
         self.active_call_dialog.hangup_signal.connect(lambda: self.end_call_remote(self.current_receiver_id))
+        self.active_call_dialog.audio_data_signal.connect(self._send_audio_data)  # Kết nối audio streaming
         self.active_call_dialog.show()
         
         # 2. Gửi yêu cầu gọi
@@ -1937,6 +1929,8 @@ class MainView(QtWidgets.QMainWindow):
                 self.active_call_dialog.close()
                 self.active_call_dialog = None
             
+            self.call_target_id = None  # Reset call target
+            
             if hasattr(self, 'incoming_dialog') and self.incoming_dialog and self.incoming_dialog.isVisible():
                 self.incoming_dialog.close()
             
@@ -1976,6 +1970,18 @@ class MainView(QtWidgets.QMainWindow):
             # That fits the "Client-Server Chat Application... without modifying core database" constraint perfectly
             # as supporting group typing would require server logic change to broadcast signal to group members.
             pass
+        
+        elif signal_type == "audio_data":
+            # Nhận audio data từ người gọi và phát qua loa
+            if self.active_call_dialog:
+                try:
+                    audio_b64 = msg.get("audio", "")
+                    if audio_b64:
+                        import base64
+                        audio_bytes = base64.b64decode(audio_b64)
+                        self.active_call_dialog.play_audio_data(audio_bytes)
+                except Exception as e:
+                    print(f"[AudioCall] Error playing received audio: {e}")
 
     def handle_typing_input(self, text):
         if not self.current_receiver_id: return
@@ -2002,7 +2008,9 @@ class MainView(QtWidgets.QMainWindow):
     def accept_call(self, sender_id, name, avatar):
         # 1. Đóng Dialog cuộc gọi đến (được xử lý bởi class)
         # 2. Hiện Dialog đang gọi
+        self.call_target_id = sender_id  # Lưu target ID để gửi audio
         self.active_call_dialog = ActiveCallDialog(name, avatar, is_caller=False, parent=self)
+        self.active_call_dialog.audio_data_signal.connect(self._send_audio_data)  # Kết nối audio streaming
         self.active_call_dialog.start_timer()
         self.active_call_dialog.show()
         
@@ -2011,6 +2019,18 @@ class MainView(QtWidgets.QMainWindow):
         
         # Xử lý dập máy
         self.active_call_dialog.hangup_signal.connect(lambda: self.end_call_remote(sender_id))
+    
+    def _send_audio_data(self, audio_bytes: bytes):
+        """Gửi audio data đến người đang gọi."""
+        if self.call_target_id:
+            try:
+                import base64
+                audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
+                self.controller.send_signal(self.call_target_id, "audio_data", {
+                    "audio": audio_b64
+                })
+            except Exception as e:
+                print(f"[AudioCall] Error sending audio: {e}")
 
     def reject_call(self, sender_id):
         self.controller.send_signal(sender_id, "call_rejected")
@@ -2044,6 +2064,9 @@ class MainView(QtWidgets.QMainWindow):
         
         # 3. Hiện log cục bộ (User A)
         self.add_message_to_chat(log_msg, "Bạn", is_self=True, is_call_log=True, avatar_base64=self.self_avatar)
+        
+        # 4. Reset call target
+        self.call_target_id = None
 
 
     # === CÁC SLOT TÍN HIỆU AN TOÀN VỚI THREAD (THREAD-SAFE SIGNAL SLOTS) ===

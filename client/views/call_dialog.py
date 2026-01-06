@@ -1,5 +1,7 @@
 from PySide6 import QtWidgets, QtCore, QtGui
 import base64
+import threading
+import pyaudio
 
 class IncomingCallDialog(QtWidgets.QDialog):
     accept_signal = QtCore.Signal()
@@ -61,7 +63,7 @@ class IncomingCallDialog(QtWidgets.QDialog):
 
         # Reject Button
         self.btn_reject = QtWidgets.QPushButton()
-        self.btn_reject.setIcon(QtGui.QIcon()) # TODO: Add icon if available, else text
+        self.btn_reject.setIcon(QtGui.QIcon())
         self.btn_reject.setText("❌")
         self.btn_reject.setFixedSize(60, 60)
         self.btn_reject.setStyleSheet("""
@@ -95,7 +97,16 @@ class IncomingCallDialog(QtWidgets.QDialog):
 
 
 class ActiveCallDialog(QtWidgets.QDialog):
+    """Dialog cuộc gọi đang diễn ra với tính năng audio streaming."""
+    
     hangup_signal = QtCore.Signal()
+    audio_data_signal = QtCore.Signal(bytes)  # Signal để gửi audio data ra ngoài
+
+    # Audio parameters
+    CHUNK = 1024
+    FORMAT = pyaudio.paInt16
+    CHANNELS = 1
+    RATE = 16000  # 16kHz phù hợp cho voice
 
     def __init__(self, peer_name, avatar_base64=None, is_caller=False, parent=None):
         super().__init__(parent)
@@ -107,6 +118,13 @@ class ActiveCallDialog(QtWidgets.QDialog):
         self.seconds = 0
         self.timer = QtCore.QTimer(self)
         self.timer.timeout.connect(self.update_timer)
+        
+        # Audio components
+        self.audio = None
+        self.input_stream = None
+        self.output_stream = None
+        self.audio_running = False
+        self.audio_thread = None
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setSpacing(20)
@@ -147,7 +165,7 @@ class ActiveCallDialog(QtWidgets.QDialog):
         self.status_lbl.setStyleSheet("font-size: 16px; color: #bdc3c7;")
         layout.addWidget(self.status_lbl, alignment=QtCore.Qt.AlignmentFlag.AlignCenter)
         
-        # Timer Label (Hidden initially if caller)
+        # Timer Label
         self.timer_lbl = QtWidgets.QLabel("00:00")
         self.timer_lbl.setStyleSheet("font-size: 30px; font-weight: bold; color: white;")
         layout.addWidget(self.timer_lbl, alignment=QtCore.Qt.AlignmentFlag.AlignCenter)
@@ -155,32 +173,139 @@ class ActiveCallDialog(QtWidgets.QDialog):
         layout.addStretch()
 
         # Hangup Button
-        self.btn_hangup = QtWidgets.QPushButton("📞")
+        self.btn_hangup = QtWidgets.QPushButton("❌")
         self.btn_hangup.setFixedSize(70, 70)
         self.btn_hangup.setStyleSheet("""
             QPushButton { background-color: #e74c3c; border-radius: 35px; font-size: 30px; }
             QPushButton:hover { background-color: #c0392b; }
         """)
-        # Note: Rotating text via stylesheet isn't easy, using Icon is better, but emoji works for now. 
-        # Actually rotate property in stylesheet doesn't work for standard widgets. 
-        # I'll just use the Hangup Emoji or Icon.
-        self.btn_hangup.setText("❌") 
-
         self.btn_hangup.clicked.connect(self.on_hangup)
         layout.addWidget(self.btn_hangup, alignment=QtCore.Qt.AlignmentFlag.AlignCenter)
         
         layout.addStretch()
 
     def start_timer(self):
+        """Bắt đầu timer và audio streaming khi cuộc gọi được kết nối."""
         self.status_lbl.setText("Đang gọi")
         self.timer.start(1000)
+        # Bắt đầu audio streaming
+        self.start_audio_stream()
 
     def update_timer(self):
         self.seconds += 1
         mins, secs = divmod(self.seconds, 60)
         self.timer_lbl.setText(f"{mins:02d}:{secs:02d}")
 
+    def start_audio_stream(self):
+        """Bắt đầu capture và playback audio."""
+        if self.audio_running:
+            return
+            
+        try:
+            self.audio = pyaudio.PyAudio()
+            
+            # Input stream (microphone) - capture audio
+            self.input_stream = self.audio.open(
+                format=self.FORMAT,
+                channels=self.CHANNELS,
+                rate=self.RATE,
+                input=True,
+                frames_per_buffer=self.CHUNK
+            )
+            
+            # Output stream (speaker) - playback audio
+            self.output_stream = self.audio.open(
+                format=self.FORMAT,
+                channels=self.CHANNELS,
+                rate=self.RATE,
+                output=True,
+                frames_per_buffer=self.CHUNK
+            )
+            
+            self.audio_running = True
+            
+            # Bắt đầu thread để capture audio
+            self.audio_thread = threading.Thread(target=self._audio_capture_loop, daemon=True)
+            self.audio_thread.start()
+            
+            print("[AudioCall] Audio streaming started")
+            
+        except Exception as e:
+            print(f"[AudioCall] Error starting audio stream: {e}")
+            self.audio_running = False
+
+    def _audio_capture_loop(self):
+        """Thread loop để capture audio từ microphone và emit signal."""
+        while self.audio_running:
+            try:
+                if self.input_stream and self.input_stream.is_active():
+                    # Đọc audio data từ microphone
+                    data = self.input_stream.read(self.CHUNK, exception_on_overflow=False)
+                    if data and self.audio_running:
+                        # Emit signal với audio data để gửi cho người nhận
+                        self.audio_data_signal.emit(data)
+            except Exception as e:
+                if self.audio_running:
+                    print(f"[AudioCall] Audio capture error: {e}")
+                break
+
+    def play_audio_data(self, data: bytes):
+        """Phát audio data nhận được từ người gọi.
+        
+        Args:
+            data: Raw audio bytes (PCM 16-bit mono 16kHz)
+        """
+        try:
+            if self.output_stream and self.output_stream.is_active() and self.audio_running:
+                self.output_stream.write(data)
+        except Exception as e:
+            print(f"[AudioCall] Audio playback error: {e}")
+
+    def stop_audio_stream(self):
+        """Dừng audio streaming và cleanup resources."""
+        self.audio_running = False
+        
+        # Đợi thread kết thúc
+        if self.audio_thread and self.audio_thread.is_alive():
+            self.audio_thread.join(timeout=1.0)
+        
+        # Đóng input stream
+        if self.input_stream:
+            try:
+                self.input_stream.stop_stream()
+                self.input_stream.close()
+            except:
+                pass
+            self.input_stream = None
+        
+        # Đóng output stream
+        if self.output_stream:
+            try:
+                self.output_stream.stop_stream()
+                self.output_stream.close()
+            except:
+                pass
+            self.output_stream = None
+        
+        # Terminate PyAudio
+        if self.audio:
+            try:
+                self.audio.terminate()
+            except:
+                pass
+            self.audio = None
+        
+        print("[AudioCall] Audio streaming stopped")
+
     def on_hangup(self):
+        """Dập máy - dừng audio và đóng dialog."""
         self.timer.stop()
+        self.stop_audio_stream()
         self.hangup_signal.emit()
-        self.accept() # Close dialog
+        self.accept()
+
+    def closeEvent(self, event):
+        """Cleanup khi dialog bị đóng."""
+        self.timer.stop()
+        self.stop_audio_stream()
+        super().closeEvent(event)
