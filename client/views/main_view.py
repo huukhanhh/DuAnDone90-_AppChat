@@ -2660,8 +2660,17 @@ class MainView(QtWidgets.QMainWindow):
     @QtCore.Slot(int, str)
     def _on_notification_clicked(self, target_id, mode):
         """Handle click on toast notification - navigate to the chat."""
-        # Get display name from cache
-        display_name = self.user_names.get(target_id, "Unknown")
+        # Get display name from appropriate cache
+        if mode == "group":
+            # Tìm tên nhóm từ danh sách groups đã cache
+            display_name = "Unknown"
+            for group in self.all_groups:
+                if group.get("id") == target_id:
+                    display_name = group.get("name", "Unknown")
+                    break
+        else:
+            # Lấy tên user từ cache
+            display_name = self.user_names.get(target_id, "Unknown")
         
         # Use existing method to select and load chat
         item_type = "group" if mode == "group" else "user"

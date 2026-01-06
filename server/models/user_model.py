@@ -1,6 +1,7 @@
 # server/models/user_model.py
 import mysql.connector
 import bcrypt
+import threading
 from config.config import DATABASE_CONFIG
 import logging
 
@@ -12,57 +13,64 @@ class UserModel:
         try:
             self.connection = mysql.connector.connect(**DATABASE_CONFIG)
             self.cursor = self.connection.cursor()
-            logger.info("Database connection established")
+            # RLock (reentrant lock) để đồng bộ hóa truy cập database
+            # RLock cho phép cùng thread acquire lock nhiều lần (tránh deadlock nested calls)
+            self._db_lock = threading.RLock()
+            logger.info("Database connection established (with RLock)")
         except mysql.connector.Error as err:
             logger.error(f"Database connection failed: {err}")
             raise
 
     def get_user_id(self, email):
-        try:
-            query = "SELECT id FROM users WHERE email = %s"
-            self.cursor.execute(query, (email,))
-            result = self.cursor.fetchone()
-            return result[0] if result else None
-        except mysql.connector.Error as err:
-            logger.error(f"Error getting user_id: {err}")
-            return None
+        with self._db_lock:
+            try:
+                query = "SELECT id FROM users WHERE email = %s"
+                self.cursor.execute(query, (email,))
+                result = self.cursor.fetchone()
+                return result[0] if result else None
+            except mysql.connector.Error as err:
+                logger.error(f"Error getting user_id: {err}")
+                return None
 
     def get_display_name(self, user_id):
-        try:
-            query = "SELECT display_name FROM users WHERE id = %s"
-            self.cursor.execute(query, (user_id,))
-            result = self.cursor.fetchone()
-            return result[0] if result else "Unknown"
-        except mysql.connector.Error as err:
-            logger.error(f"Error getting display_name: {err}")
-            return "Unknown"
+        with self._db_lock:
+            try:
+                query = "SELECT display_name FROM users WHERE id = %s"
+                self.cursor.execute(query, (user_id,))
+                result = self.cursor.fetchone()
+                return result[0] if result else "Unknown"
+            except mysql.connector.Error as err:
+                logger.error(f"Error getting display_name: {err}")
+                return "Unknown"
 
     def get_avatar(self, user_id):
-        try:
-            query = "SELECT avatar_data FROM users WHERE id = %s"
-            self.cursor.execute(query, (user_id,))
-            result = self.cursor.fetchone()
-            return result[0] if result and result[0] else None
-        except mysql.connector.Error as err:
-            logger.error(f"Error getting avatar: {err}")
-            return None
+        with self._db_lock:
+            try:
+                query = "SELECT avatar_data FROM users WHERE id = %s"
+                self.cursor.execute(query, (user_id,))
+                result = self.cursor.fetchone()
+                return result[0] if result and result[0] else None
+            except mysql.connector.Error as err:
+                logger.error(f"Error getting avatar: {err}")
+                return None
 
     def get_all_users(self):
-        try:
-            query = "SELECT id, display_name, avatar_data, last_active_at FROM users"
-            self.cursor.execute(query)
-            return [
-                {
-                    "user_id": row[0], 
-                    "display_name": row[1], 
-                    "avatar": row[2],
-                    "last_active_at": str(row[3]) if row[3] else None
-                }
-                for row in self.cursor.fetchall()
-            ]
-        except mysql.connector.Error as err:
-            logger.error(f"Error getting all users: {err}")
-            return []
+        with self._db_lock:
+            try:
+                query = "SELECT id, display_name, avatar_data, last_active_at FROM users"
+                self.cursor.execute(query)
+                return [
+                    {
+                        "user_id": row[0], 
+                        "display_name": row[1], 
+                        "avatar": row[2],
+                        "last_active_at": str(row[3]) if row[3] else None
+                    }
+                    for row in self.cursor.fetchall()
+                ]
+            except mysql.connector.Error as err:
+                logger.error(f"Error getting all users: {err}")
+                return []
 
     def register_user(self, display_name, email, password):
         try:
@@ -331,26 +339,27 @@ class UserModel:
             logger.error(f"Error closing database connection: {e}")
 
     def create_group(self, name, owner_id, member_ids):
-        try:
-            # Tạo nhóm
-            self.cursor.execute("INSERT INTO `groups` (name, owner_id) VALUES (%s, %s)", (name, owner_id))
-            group_id = self.cursor.lastrowid
+        with self._db_lock:  # Thread-safe database access
+            try:
+                # Tạo nhóm
+                self.cursor.execute("INSERT INTO `groups` (name, owner_id) VALUES (%s, %s)", (name, owner_id))
+                group_id = self.cursor.lastrowid
 
-            # Thêm thành viên (bao gồm cả owner)
-            all_members = set(member_ids)
-            all_members.add(owner_id)
-            values = [(group_id, uid) for uid in all_members]
-            self.cursor.executemany("INSERT INTO group_members (group_id, user_id) VALUES (%s, %s)", values)
+                # Thêm thành viên (bao gồm cả owner)
+                all_members = set(member_ids)
+                all_members.add(owner_id)
+                values = [(group_id, uid) for uid in all_members]
+                self.cursor.executemany("INSERT INTO group_members (group_id, user_id) VALUES (%s, %s)", values)
 
-            # Tin nhắn hệ thống báo tạo nhóm
-            creator_name = self.get_display_name(owner_id)
-            self.save_group_message(group_id, None, f"Nhóm '{name}' đã được tạo bởi {creator_name}", is_system=True)
+                # Tin nhắn hệ thống báo tạo nhóm - RLock cho phép nested lock từ cùng thread
+                creator_name = self.get_display_name(owner_id)
+                self.save_group_message(group_id, None, f"Nhóm '{name}' đã được tạo bởi {creator_name}", is_system=True)
 
-            self.connection.commit()
-            return {"status": "success", "group_id": group_id, "members": list(all_members)}
-        except Exception as e:
-            self.connection.rollback()
-            return {"status": "error", "message": str(e)}
+                self.connection.commit()
+                return {"status": "success", "group_id": group_id, "members": list(all_members)}
+            except Exception as e:
+                self.connection.rollback()
+                return {"status": "error", "message": str(e)}
 
     def add_group_member(self, group_id, user_id, added_by_name):
         try:
@@ -399,33 +408,36 @@ class UserModel:
             print(f"Error delete group: {e}")
 
     def get_user_groups(self, user_id):
-        try:
-            query = """
-                SELECT g.id, g.name, g.avatar_data 
-                FROM `groups` g
-                JOIN group_members gm ON g.id = gm.group_id
-                WHERE gm.user_id = %s
-            """
-            self.cursor.execute(query, (user_id,))
-            groups = []
-            for row in self.cursor.fetchall():
-                groups.append({"id": row[0], "name": row[1], "avatar": row[2]})
-            return groups
-        except Exception:
-            return []
+        with self._db_lock:
+            try:
+                query = """
+                    SELECT g.id, g.name, g.avatar_data 
+                    FROM `groups` g
+                    JOIN group_members gm ON g.id = gm.group_id
+                    WHERE gm.user_id = %s
+                """
+                self.cursor.execute(query, (user_id,))
+                groups = []
+                for row in self.cursor.fetchall():
+                    groups.append({"id": row[0], "name": row[1], "avatar": row[2]})
+                return groups
+            except Exception:
+                return []
 
     def get_group_members(self, group_id):
-        self.cursor.execute("SELECT user_id FROM group_members WHERE group_id = %s", (group_id,))
-        return [row[0] for row in self.cursor.fetchall()]
+        with self._db_lock:
+            self.cursor.execute("SELECT user_id FROM group_members WHERE group_id = %s", (group_id,))
+            return [row[0] for row in self.cursor.fetchall()]
 
     def save_group_message(self, group_id, sender_id, message, is_image=False, image_data=None, is_system=False, is_voice=False, voice_data=None):
-        try:
-            query = """INSERT INTO group_messages (group_id, sender_id, message, is_image, image_data, is_system, is_voice, voice_data) 
-                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
-            self.cursor.execute(query, (group_id, sender_id, message, is_image, image_data, is_system, is_voice, voice_data))
-            self.connection.commit()
-        except Exception as e:
-            print(f"Error saving group msg: {e}")
+        with self._db_lock:
+            try:
+                query = """INSERT INTO group_messages (group_id, sender_id, message, is_image, image_data, is_system, is_voice, voice_data) 
+                           VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
+                self.cursor.execute(query, (group_id, sender_id, message, is_image, image_data, is_system, is_voice, voice_data))
+                self.connection.commit()
+            except Exception as e:
+                print(f"Error saving group msg: {e}")
 
     def get_group_chat_history(self, group_id):
         try:

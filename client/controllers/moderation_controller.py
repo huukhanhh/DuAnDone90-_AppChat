@@ -1,13 +1,16 @@
 # client/controllers/moderation_controller.py
-# Client-side moderation controller - sử dụng Decision Engine (AI + Rule-based)
+# Client-side moderation controller - CHỈ DÙNG RULE-BASED (nhẹ)
 #
-# Luồng xử lý:
-# 1. AI classifier đánh giá: NOT / OFFENSIVE
-# 2. Nếu OFFENSIVE → Rule-based tìm từ vi phạm
-# 3. Quyết định:
+# Kiến trúc (01/2026):
+# - Client: Chỉ rule-based (nhanh, nhẹ, không load AI model)
+# - Server: AI + Rule-based (đầy đủ, chính xác)
+#
+# Luồng xử lý client:
+# 1. Rule-based tìm từ vi phạm trong badwords.txt
+# 2. Quyết định:
 #    - ALLOW: Gửi bình thường
 #    - WARN: Gửi tin đã che từ xấu + hiện cảnh báo
-#    - BLOCK: Không gửi + hiện thông báo chặn
+# (BLOCK chỉ xảy ra ở server-side với AI model)
 
 import os
 

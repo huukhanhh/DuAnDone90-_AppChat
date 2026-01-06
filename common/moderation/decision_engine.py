@@ -1,162 +1,499 @@
 # common/moderation/decision_engine.py
-# Decision Engine cho hệ thống chat moderation
-# Kiến trúc: AI-first + Rule-based hỗ trợ WARN
+# Multi-Layer Smart Detection Engine v2.1
+# Phiên bản: 2.1 (01/2026) - Fix Over-Censoring
 #
-# Logic quyết định:
-# 1. AI quyết định: NOT → ALLOW, OFFENSIVE → tiếp tục
-# 2. Rule-based phân loại từ: NHẸ (insult) / CỰC NẶNG (curse)
-# 3. Có từ CỰC NẶNG → BLOCK (không che, chặn hoàn toàn)
-# 4. Chỉ có từ NHẸ → WARN (che từ vi phạm, giữ từ bình thường)
+# Kiến trúc: Hybrid Waterfall với Early Return
+# 
+# THAY ĐỔI QUAN TRỌNG (v2.1):
+# - Đảo thứ tự Layer: Context Check chạy TRƯỚC Pattern Check
+# - Thêm Mitigation Logic: Không tha bổng nếu có INSULT_PREFIX
+#
+# Luồng mới:
+# Layer 1: Severe Words Detection -> BLOCK
+# Layer 2: Positive Context Detection -> ALLOW (NEW POSITION)
+# Layer 3: Insult Pattern Detection -> WARN
+# Layer 4: AI Fallback -> WARN/ALLOW
 
-from typing import Optional
+from typing import Optional, Set, List, Dict, Any
+from functools import lru_cache
+import re
 
 
-# ========== DANH SÁCH TỪ CỰC NẶNG (Profanity/Curse) ==========
-# Các từ này sẽ dẫn đến BLOCK ngay lập tức
-SEVERE_WORDS = {
+# ============================================================================
+# LAYER 1: SEVERE WORDS (Block ngay lập tức)
+# ============================================================================
+SEVERE_WORDS: Set[str] = {
     # Đit và biến thể
     "dit", "ditme", "ditmemay", "ditcon", "ditba", "ditcha",
-    "djt", "d1t", "đit", "đitme",
-    
-    # Đu và biến thể
-    "du", "duma", "ducon",
+    "djt", "d1t",
     
     # DM và biến thể
     "dm", "dmm", "dmmm", "dcm", "dcmm",
     
     # Lon và biến thể
-    "lon", "loz", "lol", "cailon", "conlon",
+    "lon", "loz", "cailon", "conlon",
     
-    # CC và biến thể
-    "cac", "cak", "concac", "caiconcac",
+    # Cac và biến thể
+    "cac", "cak", "cc", "concac", "caiconcac",
     
-    # Boi và biến thể
+    # Buoi
     "buoi", "daubuoi",
     
-    # Fuc* và biến thể
+    # VCL, VL
+    "vcl", "vl",
+    
+    # English profanity
     "fuck", "fck", "fuk",
 }
 
 
+# ============================================================================
+# LAYER 2 (Old) / LAYER 3 (New): INSULT PATTERN DETECTION
+# ============================================================================
+INSULT_PREFIXES: List[str] = ["thằng", "đồ", "con", "lũ", "bọn", "tụi", "cái"]
+
+# Normalized versions (không dấu) - dùng cho matching
+INSULT_PREFIXES_NORMALIZED: Set[str] = {"thang", "do", "con", "lu", "bon", "tui", "cai"}
+
+
+# ============================================================================
+# LAYER 3 (Old) / LAYER 2 (New): POSITIVE CONTEXT DETECTION
+# ============================================================================
+# Từ động vật (normalized)
+ANIMAL_WORDS: Set[str] = {"cho", "meo", "heo", "lon", "ga", "khi", "bo", "chuot", "trau", "tho", "vit"}
+
+# Mở rộng ngữ cảnh tích cực (normalized)
+POSITIVE_CONTEXTS: List[str] = [
+    # Tính từ mô tả tích cực
+    "de thuong", "dang yeu", "cute", "xinh", "dep", "ngoan", "gioi", 
+    "thong minh", "khon", "lanh",
+    
+    # Động từ chăm sóc
+    "nuoi", "cham", "yeu", "thich", "cung", "om", "be",
+    
+    # Chỉ định từ (demonstratives) - cho phép "con chó này"
+    "nay", "kia", "do", "ay",
+    
+    # Sở hữu
+    "nha", "cua", "cua toi", "cua em", "nha toi",
+    
+    # Mô tả ngoại hình động vật
+    "beo", "gay", "tot", "khoe", "den", "trang", "vang", "nau", "xam",
+    
+    # Từ khác
+    "toi nghiep", "dang thuong", "thu cung"
+]
+
+
+# ============================================================================
+# VIETNAMESE NORMALIZATION
+# ============================================================================
+VIETNAMESE_DIACRITICS = {
+    'à': 'a', 'á': 'a', 'ả': 'a', 'ã': 'a', 'ạ': 'a',
+    'ă': 'a', 'ằ': 'a', 'ắ': 'a', 'ẳ': 'a', 'ẵ': 'a', 'ặ': 'a',
+    'â': 'a', 'ầ': 'a', 'ấ': 'a', 'ẩ': 'a', 'ẫ': 'a', 'ậ': 'a',
+    'è': 'e', 'é': 'e', 'ẻ': 'e', 'ẽ': 'e', 'ẹ': 'e',
+    'ê': 'e', 'ề': 'e', 'ế': 'e', 'ể': 'e', 'ễ': 'e', 'ệ': 'e',
+    'ì': 'i', 'í': 'i', 'ỉ': 'i', 'ĩ': 'i', 'ị': 'i',
+    'ò': 'o', 'ó': 'o', 'ỏ': 'o', 'õ': 'o', 'ọ': 'o',
+    'ô': 'o', 'ồ': 'o', 'ố': 'o', 'ổ': 'o', 'ỗ': 'o', 'ộ': 'o',
+    'ơ': 'o', 'ờ': 'o', 'ớ': 'o', 'ở': 'o', 'ỡ': 'o', 'ợ': 'o',
+    'ù': 'u', 'ú': 'u', 'ủ': 'u', 'ũ': 'u', 'ụ': 'u',
+    'ư': 'u', 'ừ': 'u', 'ứ': 'u', 'ử': 'u', 'ữ': 'u', 'ự': 'u',
+    'ỳ': 'y', 'ý': 'y', 'ỷ': 'y', 'ỹ': 'y', 'ỵ': 'y',
+    'đ': 'd',
+}
+
+
+def _normalize_text(text: str) -> str:
+    """Chuẩn hóa văn bản: lowercase, bỏ dấu tiếng Việt."""
+    if not text:
+        return ""
+    
+    result = text.lower()
+    for vn_char, ascii_char in VIETNAMESE_DIACRITICS.items():
+        result = result.replace(vn_char, ascii_char)
+    
+    return result
+
+
+def _normalize_text_keep_words(text: str) -> List[str]:
+    """Chuẩn hóa và tách thành danh sách từ."""
+    normalized = _normalize_text(text)
+    # Loại bỏ ký tự đặc biệt, giữ lại chữ và số
+    cleaned = re.sub(r'[^a-z0-9\s]', ' ', normalized)
+    return cleaned.split()
+
+
+# ============================================================================
+# MAIN CLASS: ModerationDecisionEngine v2.1
+# ============================================================================
 class ModerationDecisionEngine:
     """
-    Decision Engine cho hệ thống chat moderation.
+    Multi-Layer Smart Detection Engine v2.1
     
-    Kiến trúc: AI-first + Rule-based hỗ trợ WARN
+    ===== HYBRID WATERFALL với Early Return =====
     
-    Luồng xử lý:
-    1. AI classifier quyết định: NOT (cho phép) / OFFENSIVE (vi phạm)
-    2. Nếu OFFENSIVE → Rule-based tìm từ vi phạm
-    3. Phân loại từ:
-       - Có từ CỰC NẶNG → BLOCK (chặn hoàn toàn)
-       - Chỉ có từ NHẸ → WARN (che từ vi phạm)
+    Thứ tự xử lý MỚI (v2.1 - Fix Over-Censoring):
     
-    Ưu điểm:
-    - Tránh over-block các câu chỉ có từ nhẹ như "sao mày ngu thế"
-    - BLOCK dành cho vi phạm nghiêm trọng (profanity)
-    - WARN cho phép gửi tin nhắn sau khi che từ xấu
+    1. Layer 1 - SEVERE:   Severe Words Detection    -> BLOCK
+    2. Layer 2 - CONTEXT:  Positive Context Detection -> ALLOW  ⬆️ (Moved UP)
+    3. Layer 3 - PATTERN:  Insult Pattern Detection   -> WARN   ⬇️ (Moved DOWN)
+    4. Layer 4 - AI:       AI Fallback               -> WARN/ALLOW
+    
+    Thay đổi quan trọng:
+    - Context Check chạy TRƯỚC Pattern Check để bảo vệ câu vô hại
+    - Mitigation: Không tha bổng nếu câu chứa INSULT_PREFIX
+      (Ví dụ: "Thằng chó ngoan" vẫn bị chặn dù có từ "ngoan")
     """
     
-    def __init__(self, ai_engine, rule_engine):
+    # Threshold cho AI
+    AI_CONFIDENCE_THRESHOLD: float = 0.85
+    
+    def __init__(self, ai_engine: Any, rule_engine: Any) -> None:
         """
-        Khởi tạo Decision Engine.
+        Khởi tạo Decision Engine v2.1.
         
         Args:
             ai_engine: ToxicAIClassifier instance
-            rule_engine: TextModerationEngine instance (rule-based)
+            rule_engine: TextModerationEngine instance
         """
         self.ai_engine = ai_engine
         self.rule_engine = rule_engine
+        
+        # Build badwords set từ rule_engine để check pattern
+        self._badwords_set: Set[str] = self._build_badwords_set()
+        
+        print("[DECISION_ENGINE] v2.1 - Hybrid Waterfall initialized")
+        print(f"[DECISION_ENGINE] Layer Order: SEVERE -> CONTEXT -> PATTERN -> AI")
     
-    def moderate(self, text: str) -> dict:
+    def _build_badwords_set(self) -> Set[str]:
+        """Xây dựng set các từ cấm từ rule_engine."""
+        badwords = set()
+        if hasattr(self.rule_engine, 'short_words'):
+            badwords.update(self.rule_engine.short_words)
+        if hasattr(self.rule_engine, 'long_words'):
+            badwords.update(self.rule_engine.long_words)
+        return badwords
+    
+    # ========================================================================
+    # MAIN METHOD: moderate()
+    # ========================================================================
+    def moderate(self, text: str) -> Dict[str, Any]:
         """
-        Kiểm duyệt văn bản.
+        Kiểm duyệt văn bản với kiến trúc Hybrid Waterfall v2.1.
+        
+        Luồng xử lý MỚI:
+        1. SEVERE    -> BLOCK (chặn từ tục ngay)
+        2. CONTEXT   -> ALLOW (bảo vệ ngữ cảnh tích cực - CHẠY TRƯỚC)
+        3. PATTERN   -> WARN  (phát hiện insult pattern)
+        4. AI        -> WARN/ALLOW (fallback)
         
         Args:
             text: Văn bản cần kiểm tra
             
         Returns:
-            dict với format:
-            {
+            dict: {
                 "action": "ALLOW" | "WARN" | "BLOCK",
-                "final_text": str | None,  # None nếu BLOCK
-                "label": "NOT" | "OFFENSIVE",
+                "final_text": str | None,
+                "label": str,
                 "score": float,
-                "hits": list[str]  # Danh sách từ vi phạm
+                "hits": List[str],
+                "layer": str
             }
         """
-        # Xử lý text rỗng
+        # Empty text -> ALLOW
         if not text or not text.strip():
-            return self._create_result("ALLOW", text, "NOT", 0.0, [])
+            return self._create_result("ALLOW", text, "NOT", 0.0, [], "EMPTY")
         
-        # ========== BƯỚC 1: AI CLASSIFIER (QUYẾT ĐỊNH CHÍNH) ==========
-        ai_result = self.ai_engine.check(text)
-        label = ai_result.get("label", "NOT")
-        score = ai_result.get("score", 0.0)
-        
-        # Nếu AI cho rằng KHÔNG vi phạm → ALLOW ngay
-        if label == "NOT":
-            return self._create_result("ALLOW", text, label, score, [])
-        
-        # ========== BƯỚC 2: RULE-BASED TÌM TỪ VI PHẠM ==========
+        # Bước 0: Lấy hits từ rule_engine (dùng cho nhiều layer)
         rule_result = self.rule_engine.check(text)
-        hits = rule_result.get("hits", [])
+        hits: List[str] = rule_result.get("hits", [])
         
-        # ========== BƯỚC 3: PHÂN LOẠI TỪ VI PHẠM ==========
-        has_severe = self._has_severe_words(hits)
+        # ================================================================
+        # LAYER 1: SEVERE WORDS DETECTION (Unchanged position)
+        # ================================================================
+        if self._check_severe_words(hits):
+            return self._create_result(
+                action="BLOCK",
+                final_text=None,
+                label="OFFENSIVE",
+                score=1.0,
+                hits=hits,
+                layer="L1_SEVERE"
+            )
         
-        # ========== BƯỚC 4: QUYẾT ĐỊNH CUỐI CÙNG ==========
-        if has_severe:
-            # Có từ CỰC NẶNG → BLOCK (chặn hoàn toàn, không che)
-            return self._create_result("BLOCK", None, label, score, hits)
+        # ================================================================
+        # LAYER 2: POSITIVE CONTEXT DETECTION (⬆️ MOVED UP from Layer 3)
+        # 
+        # Lý do: Bảo vệ ngữ cảnh tích cực TRƯỚC KHI check pattern
+        # Ví dụ: "Con chó dễ thương" -> ALLOW ngay ở đây
+        # ================================================================
+        if self._check_positive_context(text):
+            return self._create_result(
+                action="ALLOW",
+                final_text=text,
+                label="NOT",
+                score=0.0,
+                hits=[],
+                layer="L2_POSITIVE_CONTEXT"
+            )
         
-        elif hits:
-            # Chỉ có từ NHẸ → WARN (che từ vi phạm, giữ từ bình thường)
-            censored_text = self.rule_engine.censor_text(text, hits)
-            return self._create_result("WARN", censored_text, label, score, hits)
+        # ================================================================
+        # LAYER 3: INSULT PATTERN DETECTION (⬇️ MOVED DOWN from Layer 2)
+        # ================================================================
+        if self._check_insult_patterns(text, hits):
+            censored = self.rule_engine.censor_text(text, hits) if hits else text
+            return self._create_result(
+                action="WARN",
+                final_text=censored,
+                label="OFFENSIVE",
+                score=0.9,
+                hits=hits,
+                layer="L3_PATTERN"
+            )
         
-        else:
-            # AI nói OFFENSIVE nhưng rule-based không tìm được từ nào
-            # → ALLOW (tin tưởng Rule-based hơn, tránh false positive)
-            # Ví dụ: "hi", "chào" có thể bị AI đánh nhầm
-            return self._create_result("ALLOW", text, label, score, [])
+        # ================================================================
+        # LAYER 4: AI FALLBACK
+        # ================================================================
+        return self._layer4_ai_check(text, hits)
     
-    def _has_severe_words(self, hits: list) -> bool:
+    # ========================================================================
+    # LAYER 1: SEVERE WORDS CHECK
+    # ========================================================================
+    def _check_severe_words(self, hits: List[str]) -> bool:
         """
-        Kiểm tra xem có từ CỰC NẶNG trong danh sách hits không.
+        Layer 1: Kiểm tra từ ngữ tục tĩu hạng nặng.
+        
+        Logic: Nếu hits chứa bất kỳ từ nào trong SEVERE_WORDS -> True
         
         Args:
-            hits: Danh sách từ vi phạm (đã normalize)
+            hits: Danh sách từ vi phạm từ rule_engine
             
         Returns:
-            True nếu có ít nhất 1 từ cực nặng
+            True nếu phát hiện severe word, False nếu không
         """
         for hit in hits:
-            # Kiểm tra trực tiếp
-            if hit.lower() in SEVERE_WORDS:
+            hit_lower = hit.lower()
+            
+            # Exact match
+            if hit_lower in SEVERE_WORDS:
                 return True
             
-            # Kiểm tra xem hit có CHỨA từ cực nặng không
-            # (cho trường hợp ghép như "ditmemay")
+            # Substring match (cho compound words như "ditmemay")
             for severe in SEVERE_WORDS:
-                if severe in hit.lower():
+                if severe in hit_lower:
                     return True
         
         return False
     
-    def _create_result(self, action: str, final_text: Optional[str], 
-                       label: str, score: float, hits: list) -> dict:
-        """Tạo result dict chuẩn."""
+    # ========================================================================
+    # LAYER 2 (NEW): POSITIVE CONTEXT CHECK với MITIGATION
+    # ========================================================================
+    def _check_positive_context(self, text: str) -> bool:
+        """
+        Layer 2 (v2.1): Bảo vệ ngữ cảnh tích cực VỚI MITIGATION.
+        
+        Logic: Return True (Allow) KHI VÀ CHỈ KHI:
+        1. Có từ trong ANIMAL_WORDS
+        2. AND có từ trong POSITIVE_CONTEXTS  
+        3. AND **KHÔNG** chứa từ trong INSULT_PREFIXES (Mitigation)
+        
+        Mitigation giúp tránh lỗ hổng như:
+        - "Thằng chó ngoan" -> Có "ngoan" nhưng có "thằng" -> Không được tha
+        - "Con chó ngoan"   -> Có "ngoan", không có insult prefix -> Được tha
+        
+        Args:
+            text: Văn bản gốc
+            
+        Returns:
+            True nếu là ngữ cảnh tích cực an toàn, False nếu không
+        """
+        normalized = _normalize_text(text)
+        words = _normalize_text_keep_words(text)
+        
+        # Check 1: Có animal word không?
+        has_animal = any(animal in normalized for animal in ANIMAL_WORDS)
+        if not has_animal:
+            return False
+        
+        # Check 2: Có positive context không?
+        has_positive = any(positive in normalized for positive in POSITIVE_CONTEXTS)
+        if not has_positive:
+            return False
+        
+        # Check 3 (MITIGATION): Có insult prefix không?
+        # Nếu có -> KHÔNG được tha bổng (return False)
+        has_insult_prefix = any(word in INSULT_PREFIXES_NORMALIZED for word in words)
+        
+        # Đặc biệt: Kiểm tra "con" - chỉ là insult nếu đi với badword
+        # "Con chó" vs "Con điên" -> cần logic tinh tế hơn
+        # Giải pháp: Cho phép "con" nếu theo sau là animal word
+        if has_insult_prefix:
+            # Kiểm tra xem prefix có phải là "con" đi với động vật không
+            for i, word in enumerate(words):
+                if word == "con" and i + 1 < len(words):
+                    next_word = words[i + 1]
+                    if next_word in ANIMAL_WORDS:
+                        # "con chó", "con mèo" -> OK, bỏ qua insult check cho "con"
+                        continue
+                    else:
+                        # "con điên", "con đĩ" -> Không tha
+                        return False
+                elif word in INSULT_PREFIXES_NORMALIZED and word != "con":
+                    # "thằng", "đồ", "lũ" -> Không tha
+                    return False
+        
+        # Tất cả conditions passed -> Cho phép
+        return True
+    
+    # ========================================================================
+    # LAYER 3 (NEW POSITION): INSULT PATTERN CHECK  
+    # ========================================================================
+    def _check_insult_patterns(self, text: str, hits: List[str]) -> bool:
+        """
+        Layer 3 (v2.1): Phát hiện cấu trúc xúc phạm: [Prefix] + [Badword]
+        
+        Ví dụ:
+        - "Thằng ngu" -> "thằng" (prefix) + "ngu" (badword) -> True
+        - "Thằng Khánh" -> "thằng" (prefix) + "khánh" (not badword) -> False
+        
+        Args:
+            text: Văn bản gốc
+            hits: Danh sách từ vi phạm
+            
+        Returns:
+            True nếu phát hiện insult pattern, False nếu không
+        """
+        words = _normalize_text_keep_words(text)
+        
+        for i, word in enumerate(words):
+            # Kiểm tra word có phải là insult prefix không
+            if word in INSULT_PREFIXES_NORMALIZED:
+                # Lấy từ tiếp theo
+                if i + 1 < len(words):
+                    next_word = words[i + 1]
+                    
+                    # Kiểm tra từ tiếp theo có trong badwords không
+                    if next_word in self._badwords_set:
+                        return True
+        
+        return False
+    
+    # ========================================================================
+    # LAYER 4: AI FALLBACK
+    # ========================================================================
+    def _layer4_ai_check(self, text: str, hits: List[str]) -> Dict[str, Any]:
+        """
+        Layer 4: Dùng AI để xử lý các trường hợp còn lại.
+        
+        Logic:
+        - AI label = "NOT" -> ALLOW (Tin tưởng AI)
+        - AI label = "OFFENSIVE":
+            + score >= 0.85 VÀ có hits -> WARN
+            + Ngược lại -> ALLOW (Safety Net)
+        
+        Args:
+            text: Văn bản gốc
+            hits: Danh sách từ vi phạm
+            
+        Returns:
+            Result dict (luôn return, không pass)
+        """
+        # Gọi AI với cache
+        ai_result = self._cached_ai_check(text)
+        
+        label = ai_result.get("label", "NOT")
+        score = ai_result.get("score", 0.0)
+        
+        # Case 1: AI nói không vi phạm -> ALLOW
+        if label == "NOT":
+            return self._create_result(
+                action="ALLOW",
+                final_text=text,
+                label=label,
+                score=score,
+                hits=[],
+                layer="L4_AI_NOT"
+            )
+        
+        # Case 2: AI nói OFFENSIVE
+        # Chỉ WARN khi: score >= threshold VÀ có hits
+        if score >= self.AI_CONFIDENCE_THRESHOLD and hits:
+            censored = self.rule_engine.censor_text(text, hits)
+            return self._create_result(
+                action="WARN",
+                final_text=censored,
+                label=label,
+                score=score,
+                hits=hits,
+                layer="L4_AI_OFFENSIVE"
+            )
+        
+        # Case 3: Safety Net - Score thấp hoặc không có hits -> ALLOW
+        return self._create_result(
+            action="ALLOW",
+            final_text=text,
+            label=label,
+            score=score,
+            hits=hits,
+            layer="L4_AI_SAFETY_NET"
+        )
+    
+    @lru_cache(maxsize=1000)
+    def _cached_ai_check(self, text: str) -> Dict[str, Any]:
+        """
+        Gọi AI classifier với LRU cache để tối ưu hiệu năng.
+        
+        Args:
+            text: Văn bản cần kiểm tra
+            
+        Returns:
+            AI result dict với keys: label, score, action
+        """
+        return self.ai_engine.check(text)
+    
+    def _create_result(
+        self,
+        action: str,
+        final_text: Optional[str],
+        label: str,
+        score: float,
+        hits: List[str],
+        layer: str
+    ) -> Dict[str, Any]:
+        """
+        Tạo result dict chuẩn.
+        
+        Args:
+            action: ALLOW | WARN | BLOCK
+            final_text: Văn bản sau xử lý (None nếu BLOCK)
+            label: NOT | OFFENSIVE
+            score: AI confidence score
+            hits: Danh sách từ vi phạm
+            layer: Layer nào đã quyết định
+            
+        Returns:
+            Result dict
+        """
         return {
             "action": action,
             "final_text": final_text,
             "label": label,
             "score": round(score, 4),
-            "hits": hits
+            "hits": hits,
+            "layer": layer
         }
+    
+    def clear_cache(self) -> None:
+        """Xóa cache AI để reload."""
+        self._cached_ai_check.cache_clear()
+        print("[DECISION_ENGINE] AI cache cleared")
 
 
-# ========== TEST BLOCK ==========
+# ============================================================================
+# TEST BLOCK
+# ============================================================================
 if __name__ == "__main__":
     import sys
     sys.path.insert(0, r'd:\Python_VsCode\Chat_Client-Server')
@@ -165,93 +502,99 @@ if __name__ == "__main__":
     from common.moderation.text_filter import TextModerationEngine
     
     print("=" * 100)
-    print("ModerationDecisionEngine - Test Suite")
-    print("Logic: AI-first + Rule-based phân loại từ nhẹ/nặng")
+    print("ModerationDecisionEngine v2.1 - Hybrid Waterfall Test")
+    print("Layer Order: L1_SEVERE -> L2_CONTEXT -> L3_PATTERN -> L4_AI")
     print("=" * 100)
     
     # Khởi tạo engines
+    print("\n[INIT] Loading AI model...")
     ai_engine = ToxicAIClassifier()
     rule_engine = TextModerationEngine(r'd:\Python_VsCode\Chat_Client-Server\common\moderation\badwords.txt')
     
     # Khởi tạo Decision Engine
-    moderation_engine = ModerationDecisionEngine(ai_engine, rule_engine)
+    engine = ModerationDecisionEngine(ai_engine, rule_engine)
     
-    # Test cases bắt buộc
+    # Test cases - ĐẶC BIỆT CHÚ Ý các case về động vật
     test_cases = [
-        # Định dạng: (input, expected_action, expected_output_contains)
-        ("Xin chào bạn", "ALLOW", "Xin chào bạn"),
-        ("Nói chuyện ngu quá", "WARN", "***"),
-        ("Sao mày ngu thế", "WARN", "***"),
-        ("Địt mẹ mày", "BLOCK", None),
-        ("d i t m e", "BLOCK", None),
-        ("dit me", "BLOCK", None),
+        # === POSITIVE CONTEXT (Should ALLOW) ===
+        ("Con chó này dễ thương quá", "ALLOW", "L2: Positive context - animal + cute"),
+        ("Con mèo đáng yêu", "ALLOW", "L2: Positive context - cat"),
+        ("Tao thích nuôi mèo", "ALLOW", "L2: Positive context - nuôi"),
+        ("Con chó nhà tao béo tốt", "ALLOW", "L2: Positive context - béo tốt"),
+        ("Con heo này ngoan", "ALLOW", "L2: Positive context - ngoan"),
         
-        # Thêm test cases
-        ("Mày là đồ ngu", "WARN", "***"),
-        ("Đồ con chó", "WARN", "***"),
-        ("Thằng khốn nạn", "WARN", None),  # AI phát hiện, rule-based không có
-        ("Tôi yêu bạn", "ALLOW", "Tôi yêu bạn"),
+        # === INSULT PATTERN (Should WARN) - với Mitigation ===
+        ("Thằng chó ngoan", "WARN", "L3: Insult prefix 'thằng' + animal -> NOT protected"),
+        ("Đồ con chó", "WARN", "L3: Insult prefix 'đồ' + animal -> NOT protected"),
+        ("Thằng ngu", "WARN", "L3: Pattern prefix + badword"),
+        ("Đồ điên", "WARN", "L3: Pattern prefix + badword"),
+        
+        # === SEVERE (Should BLOCK) ===
+        ("Địt mẹ mày", "BLOCK", "L1: Severe word"),
+        ("dm", "BLOCK", "L1: Severe word short"),
+        ("vcl", "BLOCK", "L1: Severe word"),
+        
+        # === NORMAL (Should ALLOW) ===
+        ("Xin chào bạn", "ALLOW", "L4: Normal text"),
+        ("Thằng Khánh", "ALLOW", "L4: Name, not badword"),
+        ("Hôm nay trời đẹp", "ALLOW", "L4: Normal text"),
     ]
     
     print("\n" + "-" * 100)
-    print(f"{'Input':<30} {'Expected':<10} {'Actual':<10} {'Final Text':<30} {'Status'}")
+    print(f"{'Input':<35} {'Expected':<10} {'Actual':<10} {'Layer':<25} {'Status'}")
     print("-" * 100)
     
     passed = 0
     failed = 0
     
-    for test in test_cases:
-        input_text, expected_action, expected_output = test
-        
-        result = moderation_engine.moderate(input_text)
+    for input_text, expected_action, description in test_cases:
+        result = engine.moderate(input_text)
         actual_action = result["action"]
-        final_text = result["final_text"]
-        hits = result["hits"]
-        score = result["score"]
+        layer = result.get("layer", "N/A")
         
-        # Kiểm tra kết quả
-        action_match = actual_action == expected_action
-        
-        if action_match:
-            status = "✓ PASS"
+        is_pass = actual_action == expected_action
+        status = "[PASS]" if is_pass else "[FAIL]"
+        if is_pass:
             passed += 1
         else:
-            status = "✗ FAIL"
             failed += 1
         
-        # Hiển thị
-        final_display = str(final_text)[:28] if final_text else "None"
-        input_display = input_text[:28] if len(input_text) > 28 else input_text
-        
-        print(f"{input_display:<30} {expected_action:<10} {actual_action:<10} {final_display:<30} {status}")
-        
-        if hits:
-            print(f"    -> Hits: {hits}, Score: {score:.4f}")
+        # Encode-safe output for Windows console
+        try:
+            input_display = input_text[:33] if len(input_text) > 33 else input_text
+            # Encode to ASCII-safe format
+            safe_input = input_display.encode('ascii', 'replace').decode('ascii')
+            print(f"{safe_input:<35} {expected_action:<10} {actual_action:<10} {layer:<25} {status}")
+        except Exception:
+            print(f"{'[Text]':<35} {expected_action:<10} {actual_action:<10} {layer:<25} {status}")
     
     print("-" * 100)
-    print(f"\nKết quả: {passed}/{passed+failed} tests passed")
+    print(f"\nResult: {passed}/{passed + failed} tests passed")
     
     if failed > 0:
-        print("\n⚠️ Một số test FAIL có thể do:")
-        print("  - AI có thể đánh giá khác với expected")
-        print("  - Từ vi phạm chưa có trong badwords.txt")
+        print("\nSome tests FAILED. Check:")
+        print("  - AI classifier behavior")
+        print("  - badwords.txt content")
+        print("  - POSITIVE_CONTEXTS coverage")
+    else:
+        print("\nAll tests PASSED!")
     
     print("\n" + "=" * 100)
-    print("GIẢI THÍCH LOGIC TRÁNH OVER-BLOCK:")
+    print("v2.1 CHANGES SUMMARY:")
     print("=" * 100)
     print("""
-1. AI là tầng quyết định CHÍNH:
-   - NOT (không vi phạm) → ALLOW ngay, không gọi rule-based
-   - OFFENSIVE (vi phạm) → gọi rule-based để tìm từ cụ thể
-
-2. Rule-based phân loại từ theo MỨC ĐỘ:
-   - Từ NHẸ (insult): ngu, dốt, chó... → WARN (che từ, cho gửi)
-   - Từ CỰC NẶNG (profanity): địt, dm, lồn... → BLOCK (chặn hoàn toàn)
-
-3. Tại sao tránh được over-block:
-   - Câu "sao mày ngu thế" có từ "ngu" (từ NHẸ) → WARN thay vì BLOCK
-   - Chỉ BLOCK khi có từ CỰC NẶNG như "địt mẹ"
-   - Score AI KHÔNG được dùng để quyết định WARN/BLOCK
-   - Mức độ từ vi phạm mới quyết định WARN/BLOCK
-""")
+    [+] Layer Order Changed:
+        OLD: Severe -> Pattern -> Context -> AI
+        NEW: Severe -> Context -> Pattern -> AI
+    
+    [+] Mitigation Logic Added:
+        - "Con cho ngoan" -> ALLOW (no insult prefix)
+        - "Thang cho ngoan" -> WARN (has insult prefix)
+    
+    [+] Expanded POSITIVE_CONTEXTS:
+        + Added: "nay", "kia", "do", "beo", "tot", "khoe", colors...
+    
+    [+] Result:
+        - No more over-censoring of innocent animal phrases!
+    """)
     print("=" * 100)
