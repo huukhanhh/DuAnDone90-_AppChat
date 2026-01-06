@@ -13,8 +13,10 @@ class GroupController:
         msg = request.get("message")
         is_img = request.get("is_image", False)
         img_data = request.get("image_data")
+        is_voice = request.get("is_voice", False)
+        voice_data = request.get("voice_data")
         
-        self.model.save_group_message(gid, sender_id, msg, is_image=is_img, image_data=img_data)
+        self.model.save_group_message(gid, sender_id, msg, is_image=is_img, image_data=img_data, is_voice=is_voice, voice_data=voice_data)
         return {"status": "success", "group_id": gid}
 
     def get_history(self, group_id):

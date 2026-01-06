@@ -2503,7 +2503,6 @@ class MainView(QtWidgets.QMainWindow):
                     self.controller.send_group_message(self.current_receiver_id, "", is_voice=True, voice_data=voice_b64)
                     
                 self.add_message_to_chat(voice_b64, "Bạn", True, is_voice=True, avatar_base64=self.self_avatar)
-                self.add_message_to_chat(voice_b64, "Bạn", True, is_voice=True, avatar_base64=self.self_avatar)
 
     def add_member_to_group(self):
         if not self.current_receiver_id or self.current_mode != "group": return

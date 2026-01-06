@@ -401,7 +401,8 @@ class ServerController:
                         sender_id = self.clients.get(client_socket)
                         if sender_id:
                             # === MODERATION CHECK (Group Message) ===
-                            if not request.get("is_image", False):  # Chỉ check text, không check ảnh
+                            # Chỉ check text, không check ảnh hoặc voice
+                            if not request.get("is_image", False) and not request.get("is_voice", False):
                                 mod_result = self.mod_ctrl.check_incoming_text(request)
                                 
                                 if mod_result["action"] == "BLOCK":
@@ -430,7 +431,9 @@ class ServerController:
                                 "sender_avatar": self.model.get_avatar(sender_id),
                                 "message": request.get("message"),
                                 "is_image": request.get("is_image", False),
-                                "image_data": request.get("image_data")
+                                "image_data": request.get("image_data"),
+                                "is_voice": request.get("is_voice", False),
+                                "voice_data": request.get("voice_data")
                             }
                             
                             with self.lock:

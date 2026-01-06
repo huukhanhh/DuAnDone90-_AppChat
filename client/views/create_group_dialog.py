@@ -120,14 +120,12 @@ class CreateGroupDialog(QtWidgets.QDialog):
             h_layout.setSpacing(15)
 
             # Avatar (Vòng tròn giữ chỗ hoặc mặc định)
-            # Since we have display_name only, we can use a letter avatar or check 'avatar' key if available
-            # Assuming 'avatar' might be passed or None
+            
             
             avatar_lbl = QtWidgets.QLabel()
             avatar_lbl.setFixedSize(40, 40)
             
             # Avatar chữ cái đơn giản nếu không có ảnh
-            # Quy định: Dùng vòng tròn màu với chữ cái đầu
             # Let's just use a color circle
             avatar_lbl.setStyleSheet(f"""
                 QLabel {{

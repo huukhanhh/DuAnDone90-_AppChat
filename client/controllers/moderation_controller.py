@@ -32,36 +32,30 @@ class ClientModerationController:
         
         self.badwords_path = badwords_path
         
-        # Lazy load Decision Engine (AI model nặng)
+        # Client chỉ dùng Rule-based moderation (nhẹ)
+        # AI moderation đã có ở Server side rồi
         self._engine = None
+        self._rule_engine = None
         self._initialized = False
     
     def _ensure_initialized(self):
-        """Lazy load Decision Engine khi cần."""
+        """Load Rule-based engine (nhẹ, không cần AI model)."""
         if not self._initialized:
             try:
-                from common.moderation.ai_classifier import ToxicAIClassifier
                 from common.moderation.text_filter import TextModerationEngine
-                from common.moderation.decision_engine import ModerationDecisionEngine
-                
-                ai_engine = ToxicAIClassifier()
-                rule_engine = TextModerationEngine(self.badwords_path)
-                self._engine = ModerationDecisionEngine(ai_engine, rule_engine)
+                self._rule_engine = TextModerationEngine(self.badwords_path)
                 self._initialized = True
+                print("[CLIENT_MODERATION] Rule-based engine loaded (lightweight)")
             except Exception as e:
-                print(f"[MODERATION] Lỗi khởi tạo Decision Engine: {e}")
-                # Fallback: dùng rule-based only
-                from common.moderation.text_filter import TextModerationEngine
-                self._rule_engine_fallback = TextModerationEngine(self.badwords_path)
+                print(f"[CLIENT_MODERATION] Lỗi khởi tạo engine: {e}")
                 self._initialized = True
     
     def check_outgoing_text(self, text: str) -> dict:
         """
         Kiểm tra tin nhắn văn bản trước khi gửi.
         
-        Sử dụng Decision Engine với logic:
-        - AI quyết định: NOT → ALLOW, OFFENSIVE → Rule-based
-        - Rule-based phân loại: Từ nhẹ → WARN, Từ nặng → BLOCK
+        Client chỉ dùng Rule-based (nhẹ).
+        AI moderation được Server xử lý.
         
         Args:
             text: Nội dung tin nhắn
@@ -69,11 +63,11 @@ class ClientModerationController:
         Returns:
             dict với format:
             {
-                "action": "ALLOW" | "WARN" | "BLOCK",
-                "final_text": str | None,  # Tin nhắn sau khi che (None nếu BLOCK)
+                "action": "ALLOW" | "WARN",
+                "final_text": str,  # Tin nhắn sau khi che
                 "reason": str,  # Thông báo hiển thị cho user
                 "hits": list,  # Từ vi phạm
-                "score": float  # AI score
+                "score": float  # Luôn là 0.0 (không dùng AI)
             }
         """
         self._ensure_initialized()
@@ -88,26 +82,12 @@ class ClientModerationController:
             }
         
         try:
-            if self._engine:
-                # Dùng Decision Engine (AI + Rule-based)
-                result = self._engine.moderate(text)
-                
-                # Thêm reason thân thiện cho user
-                if result["action"] == "WARN":
-                    result["reason"] = "Tin nhắn có ngôn từ không phù hợp. Vui lòng điều chỉnh hành vi."
-                elif result["action"] == "BLOCK":
-                    result["reason"] = "Tin nhắn đã bị chặn do vi phạm tiêu chuẩn cộng đồng."
-                else:
-                    result["reason"] = ""
-                
-                return result
-            else:
-                # Fallback: chỉ dùng rule-based
-                rule_result = self._rule_engine_fallback.check(text)
+            if self._rule_engine:
+                rule_result = self._rule_engine.check(text)
                 hits = rule_result.get("hits", [])
                 
                 if hits:
-                    censored = self._rule_engine_fallback.censor_text(text, hits)
+                    censored = self._rule_engine.censor_text(text, hits)
                     return {
                         "action": "WARN",
                         "final_text": censored,
@@ -123,9 +103,17 @@ class ClientModerationController:
                         "hits": [],
                         "score": 0.0
                     }
+            else:
+                # Engine chưa khởi tạo được, cho phép gửi
+                return {
+                    "action": "ALLOW",
+                    "final_text": text,
+                    "reason": "",
+                    "hits": [],
+                    "score": 0.0
+                }
         except Exception as e:
-            print(f"[MODERATION] Lỗi kiểm duyệt: {e}")
-            # Cho phép gửi nếu có lỗi (không block user)
+            print(f"[CLIENT_MODERATION] Lỗi kiểm duyệt: {e}")
             return {
                 "action": "ALLOW",
                 "final_text": text,

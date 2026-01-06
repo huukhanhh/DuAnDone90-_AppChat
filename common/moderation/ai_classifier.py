@@ -49,6 +49,11 @@ class ToxicAIClassifier:
             self._loaded = True
             print(f"[AI_CLASSIFIER] Model loaded successfully (CPU)")
             
+            # Warmup inference để tránh lag tin nhắn đầu tiên
+            print(f"[AI_CLASSIFIER] Warming up model...")
+            _ = self._pipeline("test warmup message")
+            print(f"[AI_CLASSIFIER] Warmup complete - ready for inference")
+            
         except Exception as e:
             print(f"[AI_CLASSIFIER] Error loading model: {e}")
             self._loaded = False

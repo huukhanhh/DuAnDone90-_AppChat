@@ -65,9 +65,17 @@ class ChatMixin:
     def get_groups(self):
         return self.send_request({"action": "get_groups"}).get("groups", [])
 
-    def send_group_message(self, group_id, message, is_image=False, image_data=None):
-        req = {"action": "group_message", "group_id": group_id, "message": message, "is_image": is_image, "image_data": image_data}
-        return self.send_request(req)
+    def send_group_message(self, group_id, message, is_image=False, image_data=None, is_voice=False, voice_data=None):
+        req = {
+            "action": "group_message", 
+            "group_id": group_id, 
+            "message": message, 
+            "is_image": is_image, 
+            "image_data": image_data,
+            "is_voice": is_voice,
+            "voice_data": voice_data
+        }
+        return self.send_request(req, timeout=20)
 
     def get_group_chat_history(self, group_id):
         return self.send_request({"action": "get_group_history", "group_id": group_id}).get("history", [])

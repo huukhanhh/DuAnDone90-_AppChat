@@ -39,30 +39,39 @@ class ServerModerationController:
         
         self.badwords_path = badwords_path
         
-        # Lazy load Decision Engine (AI model nặng)
+        # EAGER LOAD Decision Engine (AI model) ngay khi server khởi động
+        # Để tránh lag tin nhắn đầu tiên
         self._engine = None
         self._initialized = False
+        self._rule_engine_fallback = None
+        
+        # Load ngay lập tức
+        self._load_engine()
+    
+    def _load_engine(self):
+        """Load Decision Engine ngay khi khởi tạo (eager loading)."""
+        try:
+            from common.moderation.ai_classifier import ToxicAIClassifier
+            from common.moderation.text_filter import TextModerationEngine
+            from common.moderation.decision_engine import ModerationDecisionEngine
+            
+            print("[SERVER_MODERATION] Loading Decision Engine...")
+            ai_engine = ToxicAIClassifier()
+            rule_engine = TextModerationEngine(self.badwords_path)
+            self._engine = ModerationDecisionEngine(ai_engine, rule_engine)
+            self._initialized = True
+            print("[SERVER_MODERATION] Decision Engine loaded successfully")
+        except Exception as e:
+            print(f"[SERVER_MODERATION] Lỗi khởi tạo Decision Engine: {e}")
+            # Fallback: dùng rule-based only
+            from common.moderation.text_filter import TextModerationEngine
+            self._rule_engine_fallback = TextModerationEngine(self.badwords_path)
+            self._initialized = True
     
     def _ensure_initialized(self):
-        """Lazy load Decision Engine khi cần."""
+        """Đảm bảo engine đã được khởi tạo (backward compatibility)."""
         if not self._initialized:
-            try:
-                from common.moderation.ai_classifier import ToxicAIClassifier
-                from common.moderation.text_filter import TextModerationEngine
-                from common.moderation.decision_engine import ModerationDecisionEngine
-                
-                print("[SERVER_MODERATION] Loading Decision Engine...")
-                ai_engine = ToxicAIClassifier()
-                rule_engine = TextModerationEngine(self.badwords_path)
-                self._engine = ModerationDecisionEngine(ai_engine, rule_engine)
-                self._initialized = True
-                print("[SERVER_MODERATION] Decision Engine loaded successfully")
-            except Exception as e:
-                print(f"[SERVER_MODERATION] Lỗi khởi tạo Decision Engine: {e}")
-                # Fallback: dùng rule-based only
-                from common.moderation.text_filter import TextModerationEngine
-                self._rule_engine_fallback = TextModerationEngine(self.badwords_path)
-                self._initialized = True
+            self._load_engine()
     
     def check_incoming_text(self, msg: dict) -> dict:
         """

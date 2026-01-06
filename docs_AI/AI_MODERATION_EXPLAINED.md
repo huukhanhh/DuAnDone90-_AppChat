@@ -197,7 +197,11 @@ result = engine.moderate("sao mày ngu thế")
 
 ## 5. Luồng Hoạt Động
 
-### 5.1 Client-side
+> [!IMPORTANT]
+> **Thay đổi kiến trúc (01/2026):** AI moderation đã được chuyển hoàn toàn sang Server-side.
+> Client chỉ dùng Rule-based (nhẹ) để giảm thời gian khởi động và tài nguyên.
+
+### 5.1 Client-side (Chỉ Rule-based - Nhẹ)
 
 ```
 User gõ tin nhắn
@@ -206,24 +210,47 @@ User gõ tin nhắn
 ┌──────────────────────────────────────┐
 │  ClientModerationController          │
 │  (client/controllers/moderation_...) │
+│                                      │
+│  ⚡ CHỈ DÙNG RULE-BASED (NHẸ)        │
+│  - Không load AI model               │
+│  - Khởi động nhanh                   │
 │       │                              │
-│       ├── ALLOW → Gửi bình thường    │
-│       ├── WARN  → Popup cảnh báo     │
-│       │          + Gửi tin đã che    │
-│       └── BLOCK → Popup chặn         │
-│                  + KHÔNG gửi         │
+│       ├── hits=[] → Gửi bình thường  │
+│       └── hits có → Popup cảnh báo   │
+│                    + Gửi tin đã che  │
 └──────────────────────────────────────┘
+       │
+       ▼ (Gửi đến Server)
 ```
 
-### 5.2 Server-side
+### 5.2 Server-side (AI + Rule-based - Đầy đủ)
 
 ```
-Server nhận tin nhắn
+┌──────────────────────────────────────┐
+│  SERVER KHỞI ĐỘNG                    │
+│       │                              │
+│       ▼                              │
+│  ┌─────────────────────────────────┐ │
+│  │ EAGER LOADING (Tải ngay)        │ │
+│  │ - Load AI Model (~1.1GB)        │ │
+│  │ - Warmup inference              │ │
+│  │ - Load Rule-based engine        │ │
+│  └─────────────────────────────────┘ │
+│       │                              │
+│  Log: [AI_CLASSIFIER] Warmup complete│
+│  Log: [SERVER_MODERATION] Ready      │
+└──────────────────────────────────────┘
+
+Server nhận tin nhắn từ Client
        │
        ▼
 ┌──────────────────────────────────────┐
 │  ServerModerationController          │
 │  (server/controllers/moderation_...) │
+│                                      │
+│  🤖 AI + RULE-BASED (ĐẦY ĐỦ)        │
+│  - AI phát hiện vi phạm              │
+│  - Rule-based xác nhận + phân loại   │
 │       │                              │
 │       ├── ALLOW → Broadcast          │
 │       ├── WARN  → Broadcast đã che   │
@@ -231,6 +258,31 @@ Server nhận tin nhắn
 │                  + Return error      │
 └──────────────────────────────────────┘
 ```
+
+### 5.3 Tại sao thiết kế như vậy?
+
+| Tiêu chí | Client-side | Server-side |
+|----------|-------------|-------------|
+| **AI Model** | ❌ Không load | ✅ Load đầy đủ |
+| **Thời gian khởi động** | ⚡ Nhanh (~1s) | ⏳ Chậm hơn (~10-30s) |
+| **RAM sử dụng** | ~50MB | ~1.5GB |
+| **Độ chính xác** | Cơ bản (rule-based) | Cao (AI + rule-based) |
+| **Lý do** | Người dùng cần UI nhanh | Server chạy 1 lần, phục vụ nhiều client |
+
+### 5.4 Quy trình khởi động đúng
+
+1. **Khởi động Server trước**
+2. **Đợi log:**
+   ```
+   [SERVER_MODERATION] Loading Decision Engine...
+   [AI_CLASSIFIER] Loading model...
+   [AI_CLASSIFIER] Model loaded successfully (CPU)
+   [AI_CLASSIFIER] Warming up model...
+   [AI_CLASSIFIER] Warmup complete - ready for inference
+   [SERVER_MODERATION] Decision Engine loaded successfully
+   ```
+3. **Sau đó khởi động Client**
+
 
 ---
 

@@ -418,11 +418,11 @@ class UserModel:
         self.cursor.execute("SELECT user_id FROM group_members WHERE group_id = %s", (group_id,))
         return [row[0] for row in self.cursor.fetchall()]
 
-    def save_group_message(self, group_id, sender_id, message, is_image=False, image_data=None, is_system=False):
+    def save_group_message(self, group_id, sender_id, message, is_image=False, image_data=None, is_system=False, is_voice=False, voice_data=None):
         try:
-            query = """INSERT INTO group_messages (group_id, sender_id, message, is_image, image_data, is_system) 
-                       VALUES (%s, %s, %s, %s, %s, %s)"""
-            self.cursor.execute(query, (group_id, sender_id, message, is_image, image_data, is_system))
+            query = """INSERT INTO group_messages (group_id, sender_id, message, is_image, image_data, is_system, is_voice, voice_data) 
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
+            self.cursor.execute(query, (group_id, sender_id, message, is_image, image_data, is_system, is_voice, voice_data))
             self.connection.commit()
         except Exception as e:
             print(f"Error saving group msg: {e}")
@@ -431,7 +431,7 @@ class UserModel:
         try:
             query = """
                 SELECT gm.sender_id, u.display_name, u.avatar_data, gm.message, 
-                       gm.is_image, gm.image_data, gm.is_system
+                       gm.is_image, gm.image_data, gm.is_system, gm.is_voice, gm.voice_data
                 FROM group_messages gm
                 LEFT JOIN users u ON gm.sender_id = u.id
                 WHERE gm.group_id = %s ORDER BY gm.timestamp ASC
@@ -441,7 +441,9 @@ class UserModel:
             for row in self.cursor.fetchall():
                 history.append({
                     "sender_id": row[0], "sender_name": row[1], "sender_avatar": row[2],
-                    "message": row[3], "is_image": bool(row[4]), "image_data": row[5], "is_system": bool(row[6])
+                    "message": row[3], "is_image": bool(row[4]), "image_data": row[5], 
+                    "is_system": bool(row[6]), "is_voice": bool(row[7]) if len(row) > 7 else False,
+                    "voice_data": row[8] if len(row) > 8 else None
                 })
             return history
         except Exception:
