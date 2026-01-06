@@ -26,3 +26,9 @@ opencv-python
 numpy
 deepface
 tensorflow
+
+# === Speech to Text (Voice Messages) ===
+SpeechRecognition
+
+# === Location Sharing ===
+geocoder

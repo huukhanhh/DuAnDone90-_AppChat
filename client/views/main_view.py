@@ -643,78 +643,220 @@ class ImageMessageWidget(QtWidgets.QWidget):
 
 
 class LocationMessageWidget(QtWidgets.QWidget):
-    """Widget hiển thị vị trí với link Google Maps."""
-    def __init__(self, lat, lng, address="", is_self=False, parent=None):
+    """Widget hiển thị vị trí với bản đồ mô phỏng và link Google Maps."""
+    stop_sharing_signal = QtCore.Signal()  # Signal khi dừng chia sẻ
+    
+    def __init__(self, lat, lng, address="", is_self=False, duration_minutes=0, 
+                 location_id=0, receiver_id=None, main_view=None, parent=None):
         super().__init__(parent)
         self.lat = lat
         self.lng = lng
         self.address = address
         self.is_self = is_self
+        self.duration_minutes = duration_minutes
+        self.is_active = True
+        self.location_id = location_id  # Timestamp để nhận diện
+        self.receiver_id = receiver_id  # ID người nhận
+        self.main_view = main_view  # Reference để gửi signal
         
-        layout = QtWidgets.QVBoxLayout(self)
-        layout.setContentsMargins(10, 10, 10, 10)
-        layout.setSpacing(8)
+        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_StyledBackground, True)
         
-        # Header with icon
+        main_layout = QtWidgets.QVBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+        
+        # === MAP PREVIEW (Vẽ mô phỏng bản đồ) ===
+        self.map_widget = MapPreviewWidget(self)
+        self.map_widget.setFixedSize(240, 120)
+        self.map_widget.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
+        self.map_widget.mousePressEvent = lambda e: self.open_maps()
+        main_layout.addWidget(self.map_widget)
+        
+        # === INFO SECTION ===
+        info_container = QtWidgets.QWidget()
+        info_container.setStyleSheet(f"""
+            background: qlineargradient(x1:0, y1:0, x2:1, y2:0, 
+                stop:0 {'#667eea' if is_self else '#7f8c8d'}, 
+                stop:1 {'#764ba2' if is_self else '#95a5a6'});
+        """)
+        info_layout = QtWidgets.QVBoxLayout(info_container)
+        info_layout.setContentsMargins(12, 10, 12, 10)
+        info_layout.setSpacing(6)
+        
+        # Header: Icon + Title
         header = QtWidgets.QHBoxLayout()
         icon_label = QtWidgets.QLabel("📍")
-        icon_label.setStyleSheet("font-size: 24px;")
+        icon_label.setStyleSheet("font-size: 18px; background: transparent;")
         header.addWidget(icon_label)
         
-        title_label = QtWidgets.QLabel("Vị trí")
-        title_label.setStyleSheet("font-weight: bold; font-size: 14px; color: white;")
+        title_label = QtWidgets.QLabel("Đang chia sẻ vị trí")
+        title_label.setStyleSheet("font-weight: bold; font-size: 13px; color: white; background: transparent;")
         header.addWidget(title_label)
         header.addStretch()
-        layout.addLayout(header)
+        info_layout.addLayout(header)
         
-        # Address text
+        # Address
         if address:
             addr_label = QtWidgets.QLabel(address)
             addr_label.setWordWrap(True)
-            addr_label.setStyleSheet("color: rgba(255,255,255,0.9); font-size: 12px;")
-            addr_label.setMaximumWidth(230)
-            layout.addWidget(addr_label)
+            addr_label.setStyleSheet("color: rgba(255,255,255,0.9); font-size: 11px; background: transparent;")
+            addr_label.setMaximumWidth(220)
+            info_layout.addWidget(addr_label)
         
-        # Coordinates
-        coord_label = QtWidgets.QLabel(f"📌 {lat:.6f}, {lng:.6f}")
-        coord_label.setStyleSheet("color: rgba(255,255,255,0.7); font-size: 11px;")
-        layout.addWidget(coord_label)
+        # Buttons row
+        btn_layout = QtWidgets.QHBoxLayout()
+        btn_layout.setSpacing(8)
         
         # Open Maps button
-        maps_btn = QtWidgets.QPushButton("🗺️ Mở Google Maps")
+        maps_btn = QtWidgets.QPushButton("🗺️ Xem bản đồ")
         maps_btn.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
         maps_btn.setStyleSheet("""
             QPushButton {
-                background-color: rgba(255,255,255,0.2);
+                background-color: rgba(255,255,255,0.25);
                 border: none;
-                border-radius: 15px;
+                border-radius: 12px;
                 color: white;
-                font-size: 12px;
-                padding: 8px 15px;
+                font-size: 11px;
+                padding: 6px 12px;
             }
-            QPushButton:hover {
-                background-color: rgba(255,255,255,0.3);
-            }
+            QPushButton:hover { background-color: rgba(255,255,255,0.35); }
         """)
         maps_btn.clicked.connect(self.open_maps)
-        layout.addWidget(maps_btn)
+        btn_layout.addWidget(maps_btn)
         
-        # Style container
-        self.setStyleSheet(f"""
-            LocationMessageWidget {{
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, 
-                    stop:0 {'#667eea' if is_self else '#7f8c8d'}, 
-                    stop:1 {'#764ba2' if is_self else '#95a5a6'});
+        # Stop sharing button (only for sender)
+        if is_self:
+            self.stop_btn = QtWidgets.QPushButton("⏹ Dừng")
+            self.stop_btn.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
+            self.stop_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: rgba(231, 76, 60, 0.8);
+                    border: none;
+                    border-radius: 12px;
+                    color: white;
+                    font-size: 11px;
+                    padding: 6px 12px;
+                }
+                QPushButton:hover { background-color: rgba(231, 76, 60, 1); }
+            """)
+            self.stop_btn.clicked.connect(self.stop_sharing)
+            btn_layout.addWidget(self.stop_btn)
+        
+        btn_layout.addStretch()
+        info_layout.addLayout(btn_layout)
+        
+        main_layout.addWidget(info_container)
+        
+        # Overall styling
+        self.setStyleSheet("""
+            LocationMessageWidget {
+                background: #2c3e50;
                 border-radius: 15px;
-            }}
+                border: 1px solid rgba(255,255,255,0.1);
+            }
         """)
-        self.setFixedWidth(260)
+        self.setFixedWidth(240)
+        
+        # Auto-hide timer (if duration set)
+        if duration_minutes > 0:
+            QtCore.QTimer.singleShot(duration_minutes * 60 * 1000, self.auto_stop)
     
     def open_maps(self):
         """Mở Google Maps trong trình duyệt."""
         import webbrowser
         url = f"https://www.google.com/maps?q={self.lat},{self.lng}"
         webbrowser.open(url)
+    
+    def stop_sharing(self):
+        """Dừng chia sẻ vị trí."""
+        self.is_active = False
+        self.stop_sharing_signal.emit()
+        
+        # Gửi signal tới receiver để xóa widget
+        if self.main_view and self.receiver_id and self.location_id:
+            self.main_view.controller.send_signal(self.receiver_id, "stop_location", {
+                "location_id": self.location_id
+            })
+            # Xóa cả bubble ở sender
+            self.main_view.remove_location_widget(self.location_id)
+        
+        _show_styled_message(self.main_view if self.main_view else self, 'information', "Vị trí", "Đã dừng chia sẻ vị trí")
+    
+    def auto_stop(self):
+        """Tự động dừng khi hết thời gian."""
+        if self.is_active:
+            self.is_active = False
+            
+            # Gửi signal tới receiver để xóa widget
+            if self.main_view and self.receiver_id and self.location_id:
+                self.main_view.controller.send_signal(self.receiver_id, "stop_location", {
+                    "location_id": self.location_id
+                })
+                # Xóa cả bubble ở sender
+                self.main_view.remove_location_widget(self.location_id)
+
+
+
+class MapPreviewWidget(QtWidgets.QWidget):
+    """Widget vẽ bản đồ mô phỏng với marker."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setStyleSheet("background: #e8f4f8; border-top-left-radius: 15px; border-top-right-radius: 15px;")
+    
+    def paintEvent(self, event):
+        painter = QtGui.QPainter(self)
+        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+        
+        w, h = self.width(), self.height()
+        
+        # Background - light map color
+        painter.fillRect(0, 0, w, h, QtGui.QColor("#e8f4f8"))
+        
+        # Draw roads (simple grid pattern)
+        road_pen = QtGui.QPen(QtGui.QColor("#d0d8dc"), 3)
+        painter.setPen(road_pen)
+        
+        # Horizontal roads
+        painter.drawLine(0, h//3, w, h//3)
+        painter.drawLine(0, 2*h//3, w, 2*h//3)
+        
+        # Vertical roads  
+        painter.drawLine(w//4, 0, w//4, h)
+        painter.drawLine(w//2, 0, w//2, h)
+        painter.drawLine(3*w//4, 0, 3*w//4, h)
+        
+        # Main road (thicker)
+        main_road_pen = QtGui.QPen(QtGui.QColor("#bdc3c7"), 6)
+        painter.setPen(main_road_pen)
+        painter.drawLine(0, h//2, w, h//2)
+        
+        # Draw marker pin
+        cx, cy = w//2, h//2
+        
+        # Pin shadow
+        painter.setBrush(QtGui.QColor(0, 0, 0, 30))
+        painter.setPen(QtCore.Qt.NoPen)
+        painter.drawEllipse(cx-8, cy+15, 16, 6)
+        
+        # Pin body (gradient)
+        gradient = QtGui.QRadialGradient(cx, cy-10, 20)
+        gradient.setColorAt(0, QtGui.QColor("#e74c3c"))
+        gradient.setColorAt(1, QtGui.QColor("#c0392b"))
+        painter.setBrush(gradient)
+        
+        # Pin shape (circle + triangle)
+        path = QtGui.QPainterPath()
+        path.addEllipse(cx-12, cy-24, 24, 24)
+        path.moveTo(cx-8, cy-5)
+        path.lineTo(cx, cy+12)
+        path.lineTo(cx+8, cy-5)
+        path.closeSubpath()
+        painter.drawPath(path)
+        
+        # Inner white circle
+        painter.setBrush(QtGui.QColor("white"))
+        painter.drawEllipse(cx-5, cy-17, 10, 10)
+
 
 class VideoMessageWidget(QtWidgets.QWidget):
     def __init__(self, video_data_base64, is_self=False, parent=None):
@@ -904,6 +1046,9 @@ class MainView(QtWidgets.QMainWindow):
         self.moderation_controller = ClientModerationController(BADWORDS_PATH)
         # Warm-up AI model in background to prevent lag on first message
         threading.Thread(target=self.moderation_controller._ensure_initialized, daemon=True).start()
+        
+        # Danh sách location_id đã bị dừng (để không load lại từ DB)
+        self.stopped_location_ids = set()
 
         self.setWindowTitle("Python Chat App")
         self.resize(1100, 750)
@@ -1313,6 +1458,20 @@ class MainView(QtWidgets.QMainWindow):
         self.btn_video_call.hide()
         h_layout.addWidget(self.btn_video_call)
 
+        # Nút Gửi Vị Trí (Header - cho chat cá nhân)
+        self.btn_location_header = QtWidgets.QPushButton("📍")
+        self.btn_location_header.setFixedSize(38, 38)
+        self.btn_location_header.setToolTip("Gửi vị trí hiện tại")
+        self.btn_location_header.setStyleSheet("""
+            QPushButton { background-color: #f3f4f6; border-radius: 19px; font-size: 18px; border: none; }
+            QPushButton:hover { background-color: #e5e7eb; }
+            QPushButton:disabled { background-color: #e5e7eb; color: #999; }
+        """)
+        self.btn_location_header.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
+        self.btn_location_header.clicked.connect(self.send_location)
+        self.btn_location_header.hide()
+        h_layout.addWidget(self.btn_location_header)
+
         # Nút Thêm Thành Viên
         self.btn_add_member = QtWidgets.QPushButton("➕")
         self.btn_add_member.setFixedSize(38, 38)
@@ -1450,15 +1609,6 @@ class MainView(QtWidgets.QMainWindow):
         self.btn_file.setStyleSheet(floating_btn_style)
         self.btn_file.clicked.connect(self.send_file)
         inp_layout.addWidget(self.btn_file)
-
-        # Location button - Send current location
-        self.btn_location = QtWidgets.QPushButton("📍")
-        self.btn_location.setFixedSize(44, 44)
-        self.btn_location.setToolTip("Gửi vị trí hiện tại")
-        self.btn_location.setCursor(QtCore.Qt.PointingHandCursor)
-        self.btn_location.setStyleSheet(floating_btn_style)
-        self.btn_location.clicked.connect(self.send_location)
-        inp_layout.addWidget(self.btn_location)
 
         # Mic button - Neumorphic floating
         self.btn_mic = QtWidgets.QPushButton("🎤")
@@ -1835,14 +1985,16 @@ class MainView(QtWidgets.QMainWindow):
             if hasattr(self, 'btn_call_header'): self.btn_call_header.hide()
             if hasattr(self, 'btn_video_call'): self.btn_video_call.hide()
 
-            # Hiện các nút nhóm
+            # Hiện các nút nhóm và location
             if hasattr(self, 'btn_add_member'): self.btn_add_member.show()
+            if hasattr(self, 'btn_location_header'): self.btn_location_header.show()
             if hasattr(self, 'btn_view_members'): self.btn_view_members.show()
             if hasattr(self, 'btn_leave_group'): self.btn_leave_group.show()
         else:
-            # Hiện các nút chat 1-1
+            # Hiện các nút chat 1-1 và location
             if hasattr(self, 'btn_call_header'): self.btn_call_header.show()
             if hasattr(self, 'btn_video_call'): self.btn_video_call.show()
+            if hasattr(self, 'btn_location_header'): self.btn_location_header.show()
 
             # Ẩn các nút nhóm
             if hasattr(self, 'btn_add_member'): self.btn_add_member.hide()
@@ -1902,7 +2054,33 @@ class MainView(QtWidgets.QMainWindow):
                 elif msg.get("is_system"):
                      self.add_system_message(msg["message"])
                 else:
-                    self.add_message_to_chat(msg["message"], name, is_self, avatar_base64=avatar)
+                    # Auto-detect location snapshot message
+                    content = msg.get("message", "")
+                    is_location = False
+                    try:
+                        if content.startswith('{"type":"location"') or content.startswith('{"type": "location"'):
+                            data = json.loads(content)
+                            if data.get("type") == "location":
+                                import time
+                                ts = data.get("ts", 0)
+                                duration = data.get("duration", 0)
+                                
+                                # Kiểm tra nếu location đã bị dừng thủ công
+                                if ts in self.stopped_location_ids:
+                                    continue
+                                
+                                # Kiểm tra xem location đã hết hạn chưa
+                                if duration > 0 and ts > 0:
+                                    expire_time = ts + (duration * 60)
+                                    if time.time() > expire_time:
+                                        # Tin nhắn vị trí đã hết hạn, bỏ qua không hiển thị
+                                        continue
+                                
+                                is_location = True
+                    except:
+                        pass
+                    
+                    self.add_message_to_chat(content, name, is_self, is_location=is_location, avatar_base64=avatar)
             
             # Buộc cuộn xuống dưới cùng sau khi cập nhật layout
             QtCore.QTimer.singleShot(100, self.scroll_to_bottom)
@@ -1915,17 +2093,17 @@ class MainView(QtWidgets.QMainWindow):
         js.setValue(js.maximum())
 
     def add_message_to_chat(self, message, sender_name, is_self=False, is_image=False, is_voice=False, is_video=False, is_call_log=False, is_file=False, file_data=None, file_size=0,
-                            avatar_base64=None):
+                            avatar_base64=None, is_location=False):
         try:
             bubble = self.create_message_bubble(message, sender_name, is_self, is_image, is_voice, is_video, is_call_log, is_file, file_data, file_size,
-                                                avatar_base64)
+                                                avatar_base64, is_location)
             self.chat_messages_layout.insertWidget(self.chat_messages_layout.count() - 1, bubble)
             QtCore.QTimer.singleShot(100, lambda: self.chat_scroll.verticalScrollBar().setValue(
                 self.chat_scroll.verticalScrollBar().maximum()))
         except Exception as e:
             print(f"Lỗi add msg: {e}")
 
-    def create_message_bubble(self, message, sender_name, is_self, is_image, is_voice, is_video, is_call_log, is_file, file_data, file_size, avatar_base64):
+    def create_message_bubble(self, message, sender_name, is_self, is_image, is_voice, is_video, is_call_log, is_file, file_data, file_size, avatar_base64, is_location=False):
         bubble_widget = QtWidgets.QWidget()
         bubble_layout = QtWidgets.QHBoxLayout(bubble_widget)
         bubble_layout.setContentsMargins(0, 5, 0, 5) # Increased margins
@@ -2019,6 +2197,31 @@ class MainView(QtWidgets.QMainWindow):
         elif is_image:
             msg_widget = ImageMessageWidget(message, is_self)
             content_layout.addWidget(msg_widget)
+        elif is_location:
+            # Parse location JSON và hiển thị widget
+            try:
+                loc_data = json.loads(message)
+                lat = loc_data.get("lat", 0)
+                lng = loc_data.get("lng", 0)
+                address = loc_data.get("address", "")
+                location_id = loc_data.get("ts", 0)  # Dùng timestamp làm ID
+                duration = loc_data.get("duration", 0)
+                
+                msg_widget = LocationMessageWidget(
+                    lat, lng, address, is_self,
+                    duration_minutes=duration,
+                    location_id=location_id,
+                    receiver_id=self.current_receiver_id if is_self else None,
+                    main_view=self if is_self else None
+                )
+                content_layout.addWidget(msg_widget)
+            except:
+                # Fallback nếu parse lỗi
+                lbl_msg = QtWidgets.QLabel(f"📍 Vị trí: {message}")
+                lbl_msg.setWordWrap(True)
+                lbl_msg.setStyleSheet(
+                    f"background-color: {'#667eea' if is_self else 'white'}; color: {'white' if is_self else 'black'}; padding: 10px 15px; border-radius: 15px;")
+                content_layout.addWidget(lbl_msg)
         else:
             lbl_msg = QtWidgets.QLabel(message)
             lbl_msg.setWordWrap(True)
@@ -2247,8 +2450,84 @@ class MainView(QtWidgets.QMainWindow):
         if not self.current_receiver_id: 
             return
         
-        self.btn_location.setEnabled(False)
-        self.btn_location.setText("⏳")
+        # Dialog chọn thời gian chia sẻ
+        dialog = QtWidgets.QDialog(self)
+        dialog.setWindowTitle("📍 Chia sẻ vị trí")
+        dialog.setModal(True)
+        dialog.resize(280, 180)
+        
+        layout = QtWidgets.QVBoxLayout(dialog)
+        layout.setSpacing(15)
+        layout.setContentsMargins(20, 20, 20, 20)
+        
+        title = QtWidgets.QLabel("Chọn thời gian chia sẻ:")
+        title.setStyleSheet("font-weight: bold; font-size: 14px;")
+        layout.addWidget(title)
+        
+        # Duration options
+        duration_combo = QtWidgets.QComboBox()
+        duration_combo.addItems([
+            "1 phút",
+            "2 phút",
+            "5 phút",
+            "Cho đến khi tôi dừng"
+        ])
+        duration_combo.setCurrentIndex(1)  # Default 2 phút
+        duration_combo.setStyleSheet("""
+            QComboBox {
+                padding: 8px 15px;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                font-size: 13px;
+            }
+        """)
+        layout.addWidget(duration_combo)
+        
+        # Buttons
+        btn_layout = QtWidgets.QHBoxLayout()
+        
+        share_btn = QtWidgets.QPushButton("📍 Chia sẻ")
+        share_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #667eea;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 8px;
+                font-weight: bold;
+            }
+            QPushButton:hover { background-color: #5a6fd6; }
+        """)
+        
+        cancel_btn = QtWidgets.QPushButton("Hủy")
+        cancel_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #f5f5f5;
+                color: #333;
+                border: 1px solid #ddd;
+                padding: 10px 20px;
+                border-radius: 8px;
+            }
+            QPushButton:hover { background-color: #e0e0e0; }
+        """)
+        
+        btn_layout.addStretch()
+        btn_layout.addWidget(share_btn)
+        btn_layout.addWidget(cancel_btn)
+        layout.addLayout(btn_layout)
+        
+        share_btn.clicked.connect(dialog.accept)
+        cancel_btn.clicked.connect(dialog.reject)
+        
+        if dialog.exec() != QtWidgets.QDialog.DialogCode.Accepted:
+            return
+        
+        # Get duration in minutes
+        duration_map = {0: 1, 1: 2, 2: 5, 3: 0}  # 0 = unlimited
+        duration_minutes = duration_map.get(duration_combo.currentIndex(), 2)
+        
+        self.btn_location_header.setEnabled(False)
+        self.btn_location_header.setText("⏳")
         
         def get_location():
             try:
@@ -2267,29 +2546,29 @@ class MainView(QtWidgets.QMainWindow):
                 return {"success": False, "error": str(e)}
         
         def on_location_ready(result):
-            self.btn_location.setEnabled(True)
-            self.btn_location.setText("📍")
+            self.btn_location_header.setEnabled(True)
+            self.btn_location_header.setText("📍")
             
             if result.get("success"):
                 lat = result["lat"]
                 lng = result["lng"]
                 address = result["address"]
                 
-                # Tạo message JSON chứa thông tin vị trí
+                # Tạo Location Snapshot JSON
+                import time
                 location_data = json.dumps({
                     "type": "location",
                     "lat": lat,
                     "lng": lng,
-                    "address": address
+                    "address": address,
+                    "ts": int(time.time()),
+                    "duration": duration_minutes
                 })
                 
                 if self.current_mode == "user":
-                    # Gửi như tin nhắn thường (server sẽ lưu và chuyển tiếp)
                     self.controller.send_message(self.current_receiver_id, location_data)
-                    # Hiển thị ngay trên giao diện
                     self.add_message_to_chat(location_data, "Bạn", True, is_location=True, avatar_base64=self.self_avatar)
                 else:
-                    # Group chat
                     self.controller.send_group_message(self.current_receiver_id, location_data)
                     self.add_message_to_chat(location_data, "Bạn", True, is_location=True, avatar_base64=self.self_avatar)
             else:
@@ -2306,6 +2585,7 @@ class MainView(QtWidgets.QMainWindow):
         self.location_worker = LocationWorker()
         self.location_worker.finished.connect(on_location_ready)
         self.location_worker.start()
+
 
     def start_call(self):
         if not self.current_receiver_id:
@@ -2423,6 +2703,43 @@ class MainView(QtWidgets.QMainWindow):
                         self.active_call_dialog.play_audio_data(audio_bytes)
                 except Exception as e:
                     print(f"[AudioCall] Error playing received audio: {e}")
+        
+        elif signal_type == "stop_location":
+            # Xóa LocationMessageWidget ở receiver khi sender dừng chia sẻ
+            location_id = msg.get("location_id", 0)
+            if location_id:
+                self.remove_location_widget(location_id)
+
+    def remove_location_widget(self, location_id):
+        """Tìm và xóa toàn bộ tin nhắn vị trí (cả bubble) theo location_id - xóa sạch không để tồn dư."""
+        # Đánh dấu đã dừng để không load lại từ DB
+        self.stopped_location_ids.add(location_id)
+        
+        for i in range(self.chat_messages_layout.count()):
+            item = self.chat_messages_layout.itemAt(i)
+            if item and item.widget():
+                bubble = item.widget()
+                # Tìm LocationMessageWidget bên trong bubble
+                for child in bubble.findChildren(LocationMessageWidget):
+                    if hasattr(child, 'location_id') and child.location_id == location_id:
+                        child.is_active = False
+                        
+                        # Cleanup tất cả children trước
+                        for w in bubble.findChildren(QtWidgets.QWidget):
+                            w.setParent(None)
+                            w.deleteLater()
+                        
+                        # Xóa khỏi layout
+                        self.chat_messages_layout.removeWidget(bubble)
+                        
+                        # Xóa bubble
+                        bubble.setParent(None)
+                        bubble.deleteLater()
+                        
+                        # Force update layout
+                        self.chat_messages_layout.update()
+                        QtCore.QCoreApplication.processEvents()
+                        return
 
     def handle_typing_input(self, text):
         if not self.current_receiver_id: return
@@ -2878,6 +3195,17 @@ class MainView(QtWidgets.QMainWindow):
         is_file = (message_type == 'file')
         is_call_log = (message_type == 'call_log')
         
+        # Auto-detect Location Snapshot message
+        is_location = False
+        if message_type == 'text' or message_type is None:
+            try:
+                if message.startswith('{"type":"location"') or message.startswith('{"type": "location"'):
+                    data = json.loads(message)
+                    if data.get("type") == "location":
+                        is_location = True
+            except:
+                pass
+        
         # Ưu tiên dùng avatar từ message (mới nhất), nếu không có thì dùng cache
         avatar = sender_avatar
         if not avatar and sender_id and sender_id in self.user_avatars:
@@ -2889,7 +3217,7 @@ class MainView(QtWidgets.QMainWindow):
              self.add_system_message(message)
              return
 
-        self.add_message_to_chat(message, sender_name, False, is_img, is_voice, is_video, is_call_log, is_file, file_data, file_size, avatar)
+        self.add_message_to_chat(message, sender_name, False, is_img, is_voice, is_video, is_call_log, is_file, file_data, file_size, avatar, is_location)
 
     def refresh_self_profile(self):
         try:
