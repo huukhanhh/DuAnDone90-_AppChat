@@ -53,24 +53,31 @@ class ClientModerationController:
                 print(f"[CLIENT_MODERATION] Lỗi khởi tạo engine: {e}")
                 self._initialized = True
     
+    # Từ vi phạm nghiêm trọng - phải BLOCK ngay ở client
+    SEVERE_WORDS = {
+        "dit", "ditme", "ditmemay", "ditcon", "ditba", "ditcha",
+        "djt", "d1t", "dm", "dmm", "dmmm", "dcm", "dcmm",
+        "lon", "loz", "cailon", "conlon",
+        "cac", "cak", "cc", "concac", "caiconcac",
+        "buoi", "daubuoi",
+        "vcl", "vl",
+        "fuck", "fck", "fuk",
+    }
+    
     def check_outgoing_text(self, text: str) -> dict:
         """
         Kiểm tra tin nhắn văn bản trước khi gửi.
         
-        Client chỉ dùng Rule-based (nhẹ).
-        AI moderation được Server xử lý.
+        Client dùng Rule-based + SEVERE_WORDS detection.
         
-        Args:
-            text: Nội dung tin nhắn
-            
         Returns:
             dict với format:
             {
-                "action": "ALLOW" | "WARN",
-                "final_text": str,  # Tin nhắn sau khi che
-                "reason": str,  # Thông báo hiển thị cho user
-                "hits": list,  # Từ vi phạm
-                "score": float  # Luôn là 0.0 (không dùng AI)
+                "action": "ALLOW" | "WARN" | "BLOCK",
+                "final_text": str,
+                "reason": str,
+                "hits": list,
+                "score": float
             }
         """
         self._ensure_initialized()
@@ -90,6 +97,30 @@ class ClientModerationController:
                 hits = rule_result.get("hits", [])
                 
                 if hits:
+                    # === KIỂM TRA SEVERE WORDS (BLOCK) ===
+                    for hit in hits:
+                        hit_lower = hit.lower()
+                        # Exact match hoặc substring match
+                        if hit_lower in self.SEVERE_WORDS:
+                            return {
+                                "action": "BLOCK",
+                                "final_text": None,
+                                "reason": "⛔ Tin nhắn chứa từ ngữ vi phạm nghiêm trọng tiêu chuẩn cộng đồng!\n\nTin nhắn sẽ KHÔNG được gửi đi.",
+                                "hits": hits,
+                                "score": 1.0
+                            }
+                        # Check substring (cho compound words)
+                        for severe in self.SEVERE_WORDS:
+                            if severe in hit_lower:
+                                return {
+                                    "action": "BLOCK",
+                                    "final_text": None,
+                                    "reason": "⛔ Tin nhắn chứa từ ngữ vi phạm nghiêm trọng tiêu chuẩn cộng đồng!\n\nTin nhắn sẽ KHÔNG được gửi đi.",
+                                    "hits": hits,
+                                    "score": 1.0
+                                }
+                    
+                    # === KHÔNG PHẢI SEVERE -> WARN ===
                     censored = self._rule_engine.censor_text(text, hits)
                     return {
                         "action": "WARN",

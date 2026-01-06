@@ -562,7 +562,7 @@ class VideoMessageWidget(QtWidgets.QWidget):
 class MainView(QtWidgets.QMainWindow):
     # Khai báo các tín hiệu để giao tiếp giữa luồng mạng và luồng giao diện
     message_received = QtCore.Signal(str, str, str, int, int, str, bool, str, int)  # content, sender_name, message_type, target_id, sender_id, sender_avatar, is_system, file_data, file_size
-    profile_updated_signal = QtCore.Signal(int, str)  # uid, name (không gửi avatar qua signal)
+    profile_updated_signal = QtCore.Signal(int, str, object)  # uid, name, avatar (avatar cũng gửi kèm)
     new_group_signal = QtCore.Signal()
     status_updated_signal = QtCore.Signal(int, str) # uid, status
     signal_received = QtCore.Signal(dict) # Tín hiệu mới cho các sự kiện P2P
@@ -1755,9 +1755,37 @@ class MainView(QtWidgets.QMainWindow):
                 resp = self.controller.send_message(self.current_receiver_id, message_to_send)
             else:
                 resp = self.controller.send_group_message(self.current_receiver_id, message_to_send)
-            if resp and resp.get("status") == "success":
-                self.add_message_to_chat(message_to_send, "Bạn", True, avatar_base64=self.self_avatar)
-                self.message_input.clear()
+            
+            if resp:
+                # === XỬ LÝ PHẢN HỒI TỪ SERVER ===
+                if resp.get("status") == "success":
+                    self.add_message_to_chat(message_to_send, "Bạn", True, avatar_base64=self.self_avatar)
+                    self.message_input.clear()
+                    
+                elif resp.get("code") == "MESSAGE_BLOCKED":
+                    # SERVER ĐÃ CHẶN TIN NHẮN (Vi phạm nghiêm trọng - Layer 1: SEVERE)
+                    server_msg = resp.get("message", "Tin nhắn bị chặn do vi phạm nghiêm trọng.")
+                    hits = resp.get("hits", [])
+                    
+                    # Hiển thị cảnh báo nghiêm trọng
+                    warning_text = f"{server_msg}\n\nTin nhắn của bạn sẽ KHÔNG được gửi đi."
+                    if hits:
+                        warning_text += f"\n\nTừ vi phạm: {', '.join(hits)}"
+                    
+                    QtWidgets.QMessageBox.critical(
+                        self,
+                        "⛔ TIN NHẮN BỊ CHẶN",
+                        warning_text
+                    )
+                    self.message_input.clear()
+                    
+                else:
+                    # Lỗi khác từ server
+                    QtWidgets.QMessageBox.warning(
+                        self,
+                        "Lỗi",
+                        resp.get("message", "Không thể gửi tin nhắn.")
+                    )
         except Exception as e:
             print(e)
 
@@ -2084,10 +2112,9 @@ class MainView(QtWidgets.QMainWindow):
                     if action == "profile_update_notification":
                         updated_uid = msg.get("user_id")
                         new_name = msg.get("display_name")
-                        # KHÔNG lấy avatar từ notification (để tránh crash)
-                        # Avatar sẽ được fetch lại từ get_users
-                        # EMIT SIGNAL (KHÔNG GỌI HÀM UI TRỰC TIẾP)
-                        self.profile_updated_signal.emit(updated_uid, new_name)
+                        new_avatar = msg.get("avatar")  # Server giờ gửi avatar
+                        # EMIT SIGNAL với đầy đủ thông tin (KHÔNG GỌI HÀM UI TRỰC TIẾP)
+                        self.profile_updated_signal.emit(updated_uid, new_name, new_avatar)
                         continue
 
                     if action == "new_group":
@@ -2210,55 +2237,91 @@ class MainView(QtWidgets.QMainWindow):
         self.app.show_login()
         self.close()
 
-    @QtCore.Slot(int, str)
-    def handle_profile_update_ui(self, user_id, display_name):
-        # Hàm này chạy trên MAIN THREAD -> An toàn để cập nhật UI
-        # Avatar sẽ được fetch lại từ get_users, không lấy từ notification
+    @QtCore.Slot(int, str, object)
+    def handle_profile_update_ui(self, user_id, display_name, avatar):
+        """
+        Cập nhật UI khi nhận profile update notification.
+        
+        Tối ưu cho multi-client:
+        - Không gọi get_users() blocking trên UI thread
+        - Dùng data từ notification để update cache ngay
+        - Background sync để đảm bảo đồng bộ đầy đủ
+        """
         try:
-            # 1. Cập nhật sidebar nếu là bản thân
+            # 1. Cập nhật cache NGAY TỪ NOTIFICATION (không cần network call)
+            if display_name:
+                self.user_names[user_id] = display_name
+            if avatar is not None:  # None check vì avatar có thể là "" (empty string)
+                self.user_avatars[user_id] = avatar
+            
+            # 1b. CẬP NHẬT all_users LIST (để update_list_display hoạt động ngay)
+            for user in self.all_users:
+                if user.get("user_id") == user_id:
+                    if display_name:
+                        user["display_name"] = display_name
+                    if avatar is not None:
+                        user["avatar"] = avatar
+                    break
+            
+            # 2. Cập nhật sidebar nếu là bản thân
             if user_id == self.user_id:
                 self.display_name = display_name
-                # Refresh profile của chính mình để lấy avatar mới
-                self.refresh_self_profile()
+                # Refresh sidebar avatar
+                if avatar:
+                    try:
+                        pix = QtGui.QPixmap()
+                        pix.loadFromData(base64.b64decode(avatar))
+                        rounded = QtGui.QPixmap(45, 45)
+                        rounded.fill(QtCore.Qt.GlobalColor.transparent)
+                        painter = QtGui.QPainter(rounded)
+                        painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
+                        path = QtGui.QPainterPath()
+                        path.addEllipse(0, 0, 45, 45)
+                        painter.setClipPath(path)
+                        painter.drawPixmap(0, 0, pix.scaled(45, 45, QtCore.Qt.AspectRatioMode.KeepAspectRatioByExpanding, QtCore.Qt.TransformationMode.SmoothTransformation))
+                        painter.end()
+                        self.sidebar_avatar.setIcon(QtGui.QIcon(rounded))
+                        self.self_avatar = avatar
+                    except Exception as e:
+                        print(f"[ProfileUpdate] Error updating sidebar avatar: {e}")
 
-            # 2. Cập nhật cache user_avatars và user_names
-            # Fetch lại danh sách user để cập nhật avatar và tên cache
-            try:
-                users = self.controller.get_users()
-                for user in users:
-                    uid = user["user_id"]
-                    self.user_avatars[uid] = user.get("avatar")
-                    self.user_names[uid] = user.get("display_name")
-                    self.user_statuses[uid] = user.get("status", "offline")
-                    self.last_active_times[uid] = user.get("last_active_at") # Store timestamp
-            except Exception as e:
-                print(f"Lỗi fetch users for cache: {e}")
-
-            # 3. Reload danh sách bên trái
-            try:
-                if self.current_mode == "user":
-                    self.load_users()
-                elif self.current_mode == "group":
-                    self.load_groups()
-            except Exception as e:
-                print(f"Lỗi reload danh sách: {e}")
-
-            # 4. Cập nhật Header nếu đang chat với người đó
+            # 3. Cập nhật Header nếu đang chat với người đó
             if self.current_mode == "user" and self.current_receiver_id == user_id:
                 self.current_receiver_name = display_name
-                self.header_name_label.setText(f"💬 {display_name}")
-                # Cập nhật lại trạng thái nếu đang hiển thị
-                status = self.user_statuses.get(user_id, "offline")
-                self.update_header_status_display(user_id, status)
+                self.header_name_label.setText(display_name)
+                # Cập nhật avatar header
+                if avatar:
+                    try:
+                        pix = QtGui.QPixmap()
+                        pix.loadFromData(base64.b64decode(avatar))
+                        rounded = QtGui.QPixmap(45, 45)
+                        rounded.fill(QtCore.Qt.GlobalColor.transparent)
+                        painter = QtGui.QPainter(rounded)
+                        painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
+                        path = QtGui.QPainterPath()
+                        path.addEllipse(0, 0, 45, 45)
+                        painter.setClipPath(path)
+                        painter.drawPixmap(0, 0, pix.scaled(45, 45, QtCore.Qt.AspectRatioMode.KeepAspectRatioByExpanding, QtCore.Qt.TransformationMode.SmoothTransformation))
+                        painter.end()
+                        self.header_avatar.setPixmap(rounded)
+                    except:
+                        pass
 
-            # 5. Cập nhật tin nhắn hiện có (Avatar & Tên)
+            # 4. Reload danh sách UI (chỉ cập nhật display, không fetch lại)
             try:
-                self.update_messages_avatar_name(user_id, display_name)
+                self.update_list_display(self.search_box.text())
             except Exception as e:
-                print(f"Lỗi cập nhật tin nhắn: {e}")
+                print(f"[ProfileUpdate] Error updating list: {e}")
+
+            # 5. Reload chat hiện tại nếu cần (để cập nhật avatar trong tin nhắn)
+            if self.current_receiver_id and (self.current_receiver_id == user_id or user_id == self.user_id):
+                try:
+                    self.reload_current_chat()
+                except Exception as e:
+                    print(f"[ProfileUpdate] Error reloading chat: {e}")
 
         except Exception as e:
-            print(f"Lỗi trong handle_profile_update_ui: {e}")
+            print(f"[ProfileUpdate] Error in handle_profile_update_ui: {e}")
             import traceback
             traceback.print_exc()
 

@@ -288,13 +288,14 @@ class ServerController:
                             )
                             
                             if response["status"] == "success":
-                                # Broadcast Profile Update (Display Name / Avatar)
+                                # Broadcast Profile Update (Display Name + Avatar)
                                 try:
                                     new_profile = self.user_ctrl.get_profile(uid)
                                     noti_data = {
                                         "action": "profile_update_notification",
                                         "user_id": uid,
-                                        "display_name": new_profile.get("display_name")
+                                        "display_name": new_profile.get("display_name"),
+                                        "avatar": new_profile.get("avatar")  # Include avatar for realtime update
                                     }
                                     self.broadcast_to_all(noti_data)
                                 except Exception as e:
@@ -317,9 +318,15 @@ class ServerController:
                                 mod_result = self.mod_ctrl.check_incoming_text(request)
                                 
                                 if mod_result["action"] == "BLOCK":
-                                    # Vi phạm nặng (profanity) -> Không broadcast, return lỗi
+                                    # Vi phạm nặng (profanity) -> Không broadcast, return lỗi với thông báo
                                     logger.warning(f"Message BLOCKED from user {sender_id}: {mod_result['hits']}")
-                                    response = {"status": "error", "code": "MESSAGE_BLOCKED"}
+                                    response = {
+                                        "status": "error", 
+                                        "code": "MESSAGE_BLOCKED",
+                                        "message": "⛔ Tin nhắn bị chặn do chứa từ ngữ vi phạm nghiêm trọng!",
+                                        "severity": "SEVERE",
+                                        "hits": mod_result.get("hits", [])
+                                    }
                                     self.send_to_client(client_socket, response)
                                     continue  # Không xử lý tiếp
                                 
@@ -406,9 +413,15 @@ class ServerController:
                                 mod_result = self.mod_ctrl.check_incoming_text(request)
                                 
                                 if mod_result["action"] == "BLOCK":
-                                    # Vi phạm nặng -> Không broadcast
+                                    # Vi phạm nặng -> Không broadcast, return lỗi với thông báo
                                     logger.warning(f"Group message BLOCKED from user {sender_id}: {mod_result['hits']}")
-                                    response = {"status": "error", "code": "MESSAGE_BLOCKED"}
+                                    response = {
+                                        "status": "error", 
+                                        "code": "MESSAGE_BLOCKED",
+                                        "message": "⛔ Tin nhắn bị chặn do chứa từ ngữ vi phạm nghiêm trọng!",
+                                        "severity": "SEVERE",
+                                        "hits": mod_result.get("hits", [])
+                                    }
                                     self.send_to_client(client_socket, response)
                                     continue
                                 
