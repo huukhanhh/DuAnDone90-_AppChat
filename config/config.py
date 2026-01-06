@@ -9,18 +9,26 @@ _config_dir = os.path.dirname(os.path.abspath(__file__))
 _project_root = os.path.dirname(_config_dir)
 BADWORDS_PATH = os.path.join(_project_root, "common", "moderation", "badwords.txt")
 DATABASE_CONFIG = {
-    "host": "172.21.1.35",
+    "host": "127.0.0.1",
     "user": "root",
-    "password": "root",
-    "database": "chat_app"
+    "password": "123456",
+    "database": "appchat"
 }
 
 SERVER_CONFIG = {
-    "host": "172.21.1.35",  # IP chung
+    "host": "172.21.1.30",  # IP chung
     "port": 5001         # Port cho socket TCP
 }
 
 MULTICAST_CONFIG = {
     "group": "239.0.0.1",  # Multicast IP (phạm vi local)
     "port": 5008
+}
+
+# === EMAIL CONFIG (For OTP) ===
+EMAIL_CONFIG = {
+    "smtp_server": "smtp.gmail.com",
+    "smtp_port": 587,
+    "sender_email": "mysu220805@gmail.com",
+    "sender_password": "tghzytymhywbomsq"  # Gmail App Password (no spaces)
 }

@@ -11,3 +11,16 @@ class UserMixin:
             req["old_password"] = old_password
             req["new_password"] = new_password
         return self.send_request(req, timeout=30)
+
+    def request_password_otp(self):
+        """Yêu cầu gửi OTP về email để đổi mật khẩu."""
+        return self.send_request({"action": "REQUEST_PASSWORD_OTP"}, timeout=30)
+
+    def verify_otp_change_password(self, otp_code, old_password, new_password):
+        """Xác thực OTP và đổi mật khẩu."""
+        return self.send_request({
+            "action": "VERIFY_OTP_CHANGE_PASSWORD",
+            "otp_code": otp_code,
+            "old_password": old_password,
+            "new_password": new_password
+        }, timeout=30)

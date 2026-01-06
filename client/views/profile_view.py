@@ -300,8 +300,9 @@ class ProfileDialog(QtWidgets.QDialog):
         self.status_label.setText("Đang cập nhật...")
 
         try:
-            # Change password if provided (xử lý trước khi update profile)
+            # Check if password change is requested
             if self.old_password_edit.text() or self.new_password_edit.text() or self.new_password2_edit.text():
+                # Validate password fields
                 if self.new_password_edit.text() != self.new_password2_edit.text():
                     self.status_label.setText("Mật khẩu xác nhận không khớp")
                     self.save_btn.setEnabled(True)
@@ -310,30 +311,193 @@ class ProfileDialog(QtWidgets.QDialog):
                     self.status_label.setText("Mật khẩu mới phải >= 6 ký tự")
                     self.save_btn.setEnabled(True)
                     return
-                # Gửi cả password trong request update_profile
-                resp = self.controller.update_profile(
-                    display_name=name, 
-                    avatar_data=self.avatar_base64,
-                    old_password=self.old_password_edit.text(),
-                    new_password=self.new_password_edit.text()
-                )
+                if not self.old_password_edit.text():
+                    self.status_label.setText("Vui lòng nhập mật khẩu hiện tại")
+                    self.save_btn.setEnabled(True)
+                    return
+                
+                # Store pending password change data
+                self._pending_password_data = {
+                    "old_password": self.old_password_edit.text(),
+                    "new_password": self.new_password_edit.text(),
+                    "display_name": name,
+                    "avatar_data": self.avatar_base64
+                }
+                
+                # Request OTP instead of changing directly
+                self._request_otp_for_password_change()
             else:
+                # No password change - just update profile
                 resp = self.controller.update_profile(
                     display_name=name, 
                     avatar_data=self.avatar_base64
                 )
-            
-            if resp.get("status") != "success":
-                self.status_label.setText(resp.get("message", "Không thể cập nhật hồ sơ"))
-                self.save_btn.setEnabled(True)
-                return
+                
+                if resp.get("status") != "success":
+                    self.status_label.setText(resp.get("message", "Không thể cập nhật hồ sơ"))
+                    self.save_btn.setEnabled(True)
+                    return
 
-            QtWidgets.QMessageBox.information(self, "Thành công", "Đã cập nhật thông tin")
-            self.accept()
+                QtWidgets.QMessageBox.information(self, "Thành công", "Đã cập nhật thông tin")
+                self.accept()
         except Exception as e:
             self.status_label.setText(f"Lỗi: {str(e)}")
             self.save_btn.setEnabled(True)
             QtWidgets.QMessageBox.critical(self, "Lỗi", f"Không thể cập nhật: {str(e)}")
+
+    def _request_otp_for_password_change(self):
+        """Yêu cầu gửi OTP về email để đổi mật khẩu."""
+        self.status_label.setText("Đang gửi mã OTP...")
+        
+        try:
+            resp = self.controller.request_password_otp()
+            
+            if resp.get("type") == "OTP_SENT" and resp.get("success"):
+                self.status_label.setText("")
+                # Hiển thị dialog nhập OTP
+                self._show_otp_dialog(resp.get("message", "Mã OTP đã được gửi về email"))
+            else:
+                self.status_label.setText(resp.get("message", "Không thể gửi OTP"))
+                self.save_btn.setEnabled(True)
+        except Exception as e:
+            self.status_label.setText(f"Lỗi: {str(e)}")
+            self.save_btn.setEnabled(True)
+
+    def _show_otp_dialog(self, info_message):
+        """Hiển thị dialog nhập mã OTP."""
+        dialog = QtWidgets.QDialog(self)
+        dialog.setWindowTitle("Xác thực OTP")
+        dialog.setModal(True)
+        dialog.resize(350, 200)
+        
+        layout = QtWidgets.QVBoxLayout(dialog)
+        layout.setSpacing(15)
+        layout.setContentsMargins(20, 20, 20, 20)
+        
+        # Title
+        title = QtWidgets.QLabel("🔐 Nhập mã xác thực")
+        title.setStyleSheet("font-size: 16px; font-weight: bold; color: #1a73e8;")
+        title.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(title)
+        
+        # Info message
+        info_label = QtWidgets.QLabel(info_message)
+        info_label.setStyleSheet("font-size: 12px; color: #666;")
+        info_label.setWordWrap(True)
+        info_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(info_label)
+        
+        # OTP Input
+        otp_input = QtWidgets.QLineEdit()
+        otp_input.setPlaceholderText("Nhập mã 6 số")
+        otp_input.setMaxLength(6)
+        otp_input.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        otp_input.setStyleSheet("""
+            QLineEdit {
+                font-size: 24px;
+                font-weight: bold;
+                letter-spacing: 10px;
+                padding: 10px;
+                border: 2px solid #ddd;
+                border-radius: 8px;
+            }
+            QLineEdit:focus {
+                border-color: #1a73e8;
+            }
+        """)
+        layout.addWidget(otp_input)
+        
+        # Status label
+        otp_status = QtWidgets.QLabel("")
+        otp_status.setStyleSheet("font-size: 12px; color: #e74c3c;")
+        otp_status.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(otp_status)
+        
+        # Buttons
+        btn_layout = QtWidgets.QHBoxLayout()
+        
+        verify_btn = QtWidgets.QPushButton("✓ Xác nhận")
+        verify_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #1a73e8;
+                color: white;
+                font-size: 14px;
+                font-weight: bold;
+                padding: 10px 25px;
+                border: none;
+                border-radius: 8px;
+            }
+            QPushButton:hover { background-color: #1557b0; }
+            QPushButton:disabled { background-color: #ccc; }
+        """)
+        
+        cancel_btn = QtWidgets.QPushButton("Hủy")
+        cancel_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #f5f5f5;
+                color: #333;
+                font-size: 14px;
+                padding: 10px 25px;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+            }
+            QPushButton:hover { background-color: #e0e0e0; }
+        """)
+        
+        btn_layout.addStretch()
+        btn_layout.addWidget(verify_btn)
+        btn_layout.addWidget(cancel_btn)
+        btn_layout.addStretch()
+        layout.addLayout(btn_layout)
+        
+        def on_verify():
+            otp_code = otp_input.text().strip()
+            if len(otp_code) != 6 or not otp_code.isdigit():
+                otp_status.setText("Vui lòng nhập đúng 6 chữ số")
+                return
+            
+            verify_btn.setEnabled(False)
+            otp_status.setText("Đang xác thực...")
+            otp_status.setStyleSheet("font-size: 12px; color: #666;")
+            
+            try:
+                data = self._pending_password_data
+                resp = self.controller.verify_otp_change_password(
+                    otp_code, 
+                    data["old_password"], 
+                    data["new_password"]
+                )
+                
+                if resp.get("type") == "PASSWORD_CHANGED" and resp.get("success"):
+                    dialog.accept()
+                    QtWidgets.QMessageBox.information(self, "Thành công", "Đổi mật khẩu thành công!")
+                    
+                    # Also update profile (name + avatar) if changed
+                    self.controller.update_profile(
+                        display_name=data["display_name"],
+                        avatar_data=data["avatar_data"]
+                    )
+                    self.accept()
+                else:
+                    otp_status.setText(resp.get("message", "OTP không đúng"))
+                    otp_status.setStyleSheet("font-size: 12px; color: #e74c3c;")
+                    verify_btn.setEnabled(True)
+            except Exception as e:
+                otp_status.setText(f"Lỗi: {str(e)}")
+                otp_status.setStyleSheet("font-size: 12px; color: #e74c3c;")
+                verify_btn.setEnabled(True)
+        
+        def on_cancel():
+            dialog.reject()
+            self.save_btn.setEnabled(True)
+            self.status_label.setText("")
+        
+        verify_btn.clicked.connect(on_verify)
+        cancel_btn.clicked.connect(on_cancel)
+        otp_input.returnPressed.connect(on_verify)
+        
+        dialog.exec()
+
 
 
 

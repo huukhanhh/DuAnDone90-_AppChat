@@ -43,6 +43,18 @@ class UserModel:
                 logger.error(f"Error getting display_name: {err}")
                 return "Unknown"
 
+    def get_user_email(self, user_id):
+        """Lấy email của user theo user_id."""
+        with self._db_lock:
+            try:
+                query = "SELECT email FROM users WHERE id = %s"
+                self.cursor.execute(query, (user_id,))
+                result = self.cursor.fetchone()
+                return result[0] if result else None
+            except mysql.connector.Error as err:
+                logger.error(f"Error getting user email: {err}")
+                return None
+
     def get_avatar(self, user_id):
         with self._db_lock:
             try:

@@ -582,6 +582,81 @@ class ServerController:
                         elif action == "FACE_DISABLE":
                             response = self.face_auth_ctrl.handle_face_disable(uid, request)
 
+                    # 7. OTP PASSWORD CHANGE
+                    elif action == "REQUEST_PASSWORD_OTP":
+                        # Gửi OTP về email của user
+                        uid = self.clients.get(client_socket)
+                        if uid:
+                            try:
+                                from common.email.email_service import get_otp_manager, get_email_service
+                                
+                                # Lấy email và tên của user
+                                user_email = self.model.get_user_email(uid)
+                                display_name = self.model.get_display_name(uid)
+                                
+                                if not user_email:
+                                    response = {"type": "OTP_SENT", "success": False, "message": "Không tìm thấy email"}
+                                else:
+                                    email_service = get_email_service()
+                                    if not email_service:
+                                        response = {"type": "OTP_SENT", "success": False, "message": "Email service chưa được cấu hình"}
+                                    else:
+                                        # Tạo OTP và gửi email
+                                        otp_manager = get_otp_manager()
+                                        otp_code = otp_manager.generate_otp(uid)
+                                        
+                                        if email_service.send_otp(user_email, otp_code, display_name):
+                                            logger.info(f"OTP sent to {user_email} for user {uid}")
+                                            # Che một phần email để hiển thị
+                                            masked_email = user_email[:3] + "***" + user_email[user_email.index("@"):]
+                                            response = {
+                                                "type": "OTP_SENT", 
+                                                "success": True, 
+                                                "message": f"Mã OTP đã được gửi đến {masked_email}"
+                                            }
+                                        else:
+                                            response = {"type": "OTP_SENT", "success": False, "message": "Không thể gửi email OTP"}
+                            except Exception as e:
+                                logger.error(f"Error sending OTP: {e}")
+                                response = {"type": "OTP_SENT", "success": False, "message": f"Lỗi: {str(e)}"}
+                        else:
+                            response = {"type": "OTP_SENT", "success": False, "message": "Chưa đăng nhập"}
+                    
+                    elif action == "VERIFY_OTP_CHANGE_PASSWORD":
+                        # Xác thực OTP và đổi mật khẩu
+                        uid = self.clients.get(client_socket)
+                        if uid:
+                            try:
+                                from common.email.email_service import get_otp_manager
+                                
+                                otp_code = request.get("otp_code", "").strip()
+                                old_password = request.get("old_password", "")
+                                new_password = request.get("new_password", "")
+                                
+                                if not otp_code or not old_password or not new_password:
+                                    response = {"type": "PASSWORD_CHANGED", "success": False, "message": "Thiếu thông tin"}
+                                else:
+                                    # Xác thực OTP trước
+                                    otp_manager = get_otp_manager()
+                                    otp_valid, otp_msg = otp_manager.verify_otp(uid, otp_code)
+                                    
+                                    if not otp_valid:
+                                        response = {"type": "PASSWORD_CHANGED", "success": False, "message": otp_msg}
+                                    else:
+                                        # OTP hợp lệ - tiến hành đổi mật khẩu
+                                        change_result = self.model.change_password(uid, old_password, new_password)
+                                        
+                                        if change_result.get("status") == "success":
+                                            logger.info(f"Password changed for user {uid}")
+                                            response = {"type": "PASSWORD_CHANGED", "success": True, "message": "Đổi mật khẩu thành công!"}
+                                        else:
+                                            response = {"type": "PASSWORD_CHANGED", "success": False, "message": change_result.get("message", "Lỗi đổi mật khẩu")}
+                            except Exception as e:
+                                logger.error(f"Error verifying OTP: {e}")
+                                response = {"type": "PASSWORD_CHANGED", "success": False, "message": f"Lỗi: {str(e)}"}
+                        else:
+                            response = {"type": "PASSWORD_CHANGED", "success": False, "message": "Chưa đăng nhập"}
+
                     # Respond
                     print(f"[DEBUG response] Sending response to client: action={action}, status={response.get('status') if response else 'None'}")
                     self.send_to_client(client_socket, response)

@@ -25,7 +25,48 @@ from client.views.call_dialog import IncomingCallDialog, ActiveCallDialog
 from client.controllers.moderation_controller import ClientModerationController
 from client.views.notification_toast import NotificationManager
 from config.config import BADWORDS_PATH
+from client.ui.camera_capture_dialog import CameraCaptureDialog
 
+
+# Helper function to show styled QMessageBox with white background
+def _show_styled_message(parent, msg_type, title, message):
+    """
+    Hiển thị QMessageBox với style nền trắng để dễ đọc.
+    msg_type: 'information', 'warning', 'critical'
+    """
+    msg_box = QtWidgets.QMessageBox(parent)
+    msg_box.setWindowTitle(title)
+    msg_box.setText(message)
+    
+    if msg_type == 'information':
+        msg_box.setIcon(QtWidgets.QMessageBox.Icon.Information)
+    elif msg_type == 'warning':
+        msg_box.setIcon(QtWidgets.QMessageBox.Icon.Warning)
+    elif msg_type == 'critical':
+        msg_box.setIcon(QtWidgets.QMessageBox.Icon.Critical)
+    
+    msg_box.setStyleSheet("""
+        QMessageBox {
+            background-color: white;
+        }
+        QMessageBox QLabel {
+            color: #333;
+            font-size: 13px;
+        }
+        QMessageBox QPushButton {
+            background-color: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 5px;
+            min-width: 80px;
+            font-size: 12px;
+        }
+        QMessageBox QPushButton:hover {
+            background-color: #5a6fd6;
+        }
+    """)
+    msg_box.exec()
 
 
 
@@ -191,7 +232,7 @@ class WaveformWidget(QtWidgets.QWidget):
 
 
 class VoiceMessageWidget(QtWidgets.QWidget):
-    """Voice message with glassmorphism, gradient play button, waveform visualization"""
+    """Voice message with glassmorphism, gradient play button, waveform visualization, and speech-to-text"""
     def __init__(self, voice_data, is_self=False, parent=None):
         super().__init__(parent)
         self.voice_data = voice_data
@@ -203,11 +244,18 @@ class VoiceMessageWidget(QtWidgets.QWidget):
         self.audio_player.setAudioOutput(self.audio_output)
         self.audio_output.setVolume(1.0)
         self.temp_file = None
+        self.transcribed_text = None
         
-        # Glassmorphism pill-shaped bubble
-        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.setStyleSheet("""
-            VoiceMessageWidget {
+        # Main layout
+        main_layout = QtWidgets.QVBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(5)
+        
+        # Audio player container
+        self.player_widget = QtWidgets.QWidget()
+        self.player_widget.setAttribute(QtCore.Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.player_widget.setStyleSheet("""
+            QWidget {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0, 
                     stop:0 rgba(102, 126, 234, 0.9), 
                     stop:1 rgba(118, 75, 162, 0.9));
@@ -216,7 +264,7 @@ class VoiceMessageWidget(QtWidgets.QWidget):
             }
         """)
         
-        layout = QtWidgets.QHBoxLayout(self)
+        layout = QtWidgets.QHBoxLayout(self.player_widget)
         layout.setContentsMargins(8, 8, 12, 8)
         layout.setSpacing(10)
         
@@ -262,6 +310,46 @@ class VoiceMessageWidget(QtWidgets.QWidget):
         self.time_label.setFixedWidth(36)
         layout.addWidget(self.time_label)
         
+        # Transcribe button
+        self.transcribe_btn = QtWidgets.QPushButton("📝")
+        self.transcribe_btn.setFixedSize(30, 30)
+        self.transcribe_btn.setCursor(QtCore.Qt.PointingHandCursor)
+        self.transcribe_btn.setToolTip("Chuyển thành văn bản")
+        self.transcribe_btn.setStyleSheet("""
+            QPushButton { 
+                background: rgba(255, 255, 255, 0.2);
+                border: none; 
+                border-radius: 15px; 
+                color: white; 
+                font-size: 14px;
+            } 
+            QPushButton:hover { 
+                background: rgba(255, 255, 255, 0.4);
+            }
+            QPushButton:disabled {
+                background: rgba(255, 255, 255, 0.1);
+                color: rgba(255, 255, 255, 0.5);
+            }
+        """)
+        self.transcribe_btn.clicked.connect(self.transcribe_audio)
+        layout.addWidget(self.transcribe_btn)
+        
+        main_layout.addWidget(self.player_widget)
+        
+        # Transcription text label (hidden initially)
+        self.text_label = QtWidgets.QLabel()
+        self.text_label.setWordWrap(True)
+        self.text_label.setStyleSheet("""
+            background-color: rgba(102, 126, 234, 0.1);
+            color: #333;
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-size: 12px;
+        """)
+        self.text_label.setVisible(False)
+        self.text_label.setMaximumWidth(300)
+        main_layout.addWidget(self.text_label)
+        
         # Connections
         self.progress_timer = QtCore.QTimer()
         self.progress_timer.timeout.connect(self.update_progress)
@@ -269,10 +357,10 @@ class VoiceMessageWidget(QtWidgets.QWidget):
         self.audio_player.durationChanged.connect(self.on_duration_changed)
         self.audio_player.playbackStateChanged.connect(self.on_state_changed)
         
-        # Size - fill available space
-        self.setFixedHeight(50)
+        # Size
+        self.player_widget.setFixedHeight(50)
         self.setMinimumWidth(180)
-        self.setMaximumWidth(300)
+        self.setMaximumWidth(320)
 
     def seek_to_progress(self, progress):
         """Called by waveform when clicked"""
@@ -337,6 +425,68 @@ class VoiceMessageWidget(QtWidgets.QWidget):
         if self.total_duration > 0:
             pos = self.audio_player.position()
             self.waveform.setProgress(int((pos / self.total_duration) * 100))
+
+    def transcribe_audio(self):
+        """Chuyển đổi giọng nói thành văn bản sử dụng Google Speech Recognition"""
+        if self.transcribed_text:
+            # Already transcribed, toggle visibility
+            self.text_label.setVisible(not self.text_label.isVisible())
+            return
+        
+        self.transcribe_btn.setEnabled(False)
+        self.transcribe_btn.setText("⏳")
+        
+        # Run in thread to avoid blocking UI
+        def do_transcribe():
+            try:
+                import speech_recognition as sr
+                
+                # Ensure temp file exists
+                if self.temp_file is None or not os.path.exists(self.temp_file):
+                    audio_bytes = base64.b64decode(self.voice_data)
+                    import tempfile
+                    temp_dir = tempfile.gettempdir()
+                    self.temp_file = os.path.join(temp_dir, f"temp_voice_{id(self)}.wav")
+                    with open(self.temp_file, 'wb') as f: 
+                        f.write(audio_bytes)
+                
+                recognizer = sr.Recognizer()
+                with sr.AudioFile(self.temp_file) as source:
+                    audio = recognizer.record(source)
+                
+                # Use Google Speech Recognition (supports Vietnamese)
+                text = recognizer.recognize_google(audio, language="vi-VN")
+                return ("success", text)
+            except sr.UnknownValueError:
+                return ("error", "Không nhận diện được giọng nói")
+            except sr.RequestError as e:
+                return ("error", f"Lỗi kết nối: {e}")
+            except Exception as e:
+                return ("error", f"Lỗi: {e}")
+        
+        def on_complete(result):
+            status, text = result
+            self.transcribe_btn.setEnabled(True)
+            self.transcribe_btn.setText("📝")
+            
+            if status == "success":
+                self.transcribed_text = text
+                self.text_label.setText(f"📝 {text}")
+                self.text_label.setVisible(True)
+            else:
+                _show_styled_message(self, 'warning', "Không thể chuyển đổi", text)
+        
+        # Use QThread for async operation
+        class TranscribeWorker(QtCore.QThread):
+            finished = QtCore.Signal(tuple)
+            
+            def run(self):
+                result = do_transcribe()
+                self.finished.emit(result)
+        
+        self.worker = TranscribeWorker()
+        self.worker.finished.connect(on_complete)
+        self.worker.start()
 
     def cleanup(self):
         if self.temp_file and os.path.exists(self.temp_file):
@@ -407,9 +557,9 @@ class FileMessageWidget(QtWidgets.QWidget):
             if save_path:
                 with open(save_path, 'wb') as f:
                     f.write(base64.b64decode(self.file_data))
-                QtWidgets.QMessageBox.information(self, "Thành công", "Đã lưu file thành công!")
+                _show_styled_message(self, 'information', "Thành công", "Đã lưu file thành công!")
         except Exception as e:
-            QtWidgets.QMessageBox.critical(self, "Lỗi", f"Không thể lưu file: {e}")
+            _show_styled_message(self, 'critical', "Lỗi", f"Không thể lưu file: {e}")
 
 class ClickableLabel(QtWidgets.QLabel):
     clicked = QtCore.Signal()
@@ -418,6 +568,153 @@ class ClickableLabel(QtWidgets.QLabel):
         if event.button() == QtCore.Qt.MouseButton.LeftButton: self.clicked.emit()
         super().mousePressEvent(event)
 
+
+class ImageMessageWidget(QtWidgets.QWidget):
+    """Widget hiển thị ảnh với nút tải về."""
+    def __init__(self, image_data_base64, is_self=False, parent=None):
+        super().__init__(parent)
+        self.image_data = image_data_base64
+        self.is_self = is_self
+        
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(5)
+        
+        # Image Container
+        img_container = QtWidgets.QWidget()
+        img_layout = QtWidgets.QVBoxLayout(img_container)
+        img_layout.setContentsMargins(0, 0, 0, 0)
+        
+        # Image Label
+        self.img_label = QtWidgets.QLabel()
+        try:
+            p = QtGui.QPixmap()
+            p.loadFromData(base64.b64decode(image_data_base64))
+            self.img_label.setPixmap(p.scaled(250, 250, QtCore.Qt.AspectRatioMode.KeepAspectRatio, QtCore.Qt.TransformationMode.SmoothTransformation))
+        except:
+            self.img_label.setText("Lỗi ảnh")
+        self.img_label.setStyleSheet("border-radius: 10px;")
+        img_layout.addWidget(self.img_label)
+        
+        layout.addWidget(img_container)
+        
+        # Download Button
+        btn_container = QtWidgets.QWidget()
+        btn_layout = QtWidgets.QHBoxLayout(btn_container)
+        btn_layout.setContentsMargins(0, 0, 0, 0)
+        
+        self.btn_download = QtWidgets.QPushButton("⬇")
+        self.btn_download.setFixedHeight(28)
+        self.btn_download.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
+        self.btn_download.setStyleSheet(f"""
+            QPushButton {{ 
+                background-color: {'#667eea' if is_self else '#7f8c8d'}; 
+                border: none; 
+                border-radius: 14px; 
+                color: white; 
+                font-size: 11px;
+                padding: 5px 15px;
+            }} 
+            QPushButton:hover {{ 
+                background-color: {'#5a6fd6' if is_self else '#6c7a89'}; 
+            }}
+        """)
+        self.btn_download.clicked.connect(self.download_image)
+        
+        if is_self:
+            btn_layout.addStretch()
+        btn_layout.addWidget(self.btn_download)
+        if not is_self:
+            btn_layout.addStretch()
+        
+        layout.addWidget(btn_container)
+        
+    def download_image(self):
+        try:
+            save_path, _ = QtWidgets.QFileDialog.getSaveFileName(
+                self, "Lưu ảnh", "image.jpg", "Image Files (*.jpg *.png)"
+            )
+            if save_path:
+                with open(save_path, 'wb') as f:
+                    f.write(base64.b64decode(self.image_data))
+                _show_styled_message(self, 'information', "Thành công", "Đã lưu ảnh thành công!")
+        except Exception as e:
+            _show_styled_message(self, 'critical', "Lỗi", f"Không thể lưu ảnh: {e}")
+
+
+class LocationMessageWidget(QtWidgets.QWidget):
+    """Widget hiển thị vị trí với link Google Maps."""
+    def __init__(self, lat, lng, address="", is_self=False, parent=None):
+        super().__init__(parent)
+        self.lat = lat
+        self.lng = lng
+        self.address = address
+        self.is_self = is_self
+        
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setSpacing(8)
+        
+        # Header with icon
+        header = QtWidgets.QHBoxLayout()
+        icon_label = QtWidgets.QLabel("📍")
+        icon_label.setStyleSheet("font-size: 24px;")
+        header.addWidget(icon_label)
+        
+        title_label = QtWidgets.QLabel("Vị trí")
+        title_label.setStyleSheet("font-weight: bold; font-size: 14px; color: white;")
+        header.addWidget(title_label)
+        header.addStretch()
+        layout.addLayout(header)
+        
+        # Address text
+        if address:
+            addr_label = QtWidgets.QLabel(address)
+            addr_label.setWordWrap(True)
+            addr_label.setStyleSheet("color: rgba(255,255,255,0.9); font-size: 12px;")
+            addr_label.setMaximumWidth(230)
+            layout.addWidget(addr_label)
+        
+        # Coordinates
+        coord_label = QtWidgets.QLabel(f"📌 {lat:.6f}, {lng:.6f}")
+        coord_label.setStyleSheet("color: rgba(255,255,255,0.7); font-size: 11px;")
+        layout.addWidget(coord_label)
+        
+        # Open Maps button
+        maps_btn = QtWidgets.QPushButton("🗺️ Mở Google Maps")
+        maps_btn.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
+        maps_btn.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(255,255,255,0.2);
+                border: none;
+                border-radius: 15px;
+                color: white;
+                font-size: 12px;
+                padding: 8px 15px;
+            }
+            QPushButton:hover {
+                background-color: rgba(255,255,255,0.3);
+            }
+        """)
+        maps_btn.clicked.connect(self.open_maps)
+        layout.addWidget(maps_btn)
+        
+        # Style container
+        self.setStyleSheet(f"""
+            LocationMessageWidget {{
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, 
+                    stop:0 {'#667eea' if is_self else '#7f8c8d'}, 
+                    stop:1 {'#764ba2' if is_self else '#95a5a6'});
+                border-radius: 15px;
+            }}
+        """)
+        self.setFixedWidth(260)
+    
+    def open_maps(self):
+        """Mở Google Maps trong trình duyệt."""
+        import webbrowser
+        url = f"https://www.google.com/maps?q={self.lat},{self.lng}"
+        webbrowser.open(url)
 
 class VideoMessageWidget(QtWidgets.QWidget):
     def __init__(self, video_data_base64, is_self=False, parent=None):
@@ -477,6 +774,18 @@ class VideoMessageWidget(QtWidgets.QWidget):
         self.slider.sliderPressed.connect(self.pause_for_seek)
         self.slider.sliderReleased.connect(self.end_seek)
         c_layout.addWidget(self.slider)
+
+        # Download Button
+        self.btn_download = QtWidgets.QPushButton("⬇")
+        self.btn_download.setFixedSize(30, 30)
+        self.btn_download.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
+        self.btn_download.setToolTip("Tải video")
+        self.btn_download.setStyleSheet("""
+            QPushButton { border: none; font-size: 14px; color: #667eea; background: rgba(102, 126, 234, 0.1); border-radius: 15px; }
+            QPushButton:hover { background: rgba(102, 126, 234, 0.2); }
+        """)
+        self.btn_download.clicked.connect(self.download_video)
+        c_layout.addWidget(self.btn_download)
 
         layout.addWidget(controls)
 
@@ -555,6 +864,17 @@ class VideoMessageWidget(QtWidgets.QWidget):
             except:
                 pass
 
+    def download_video(self):
+        try:
+            save_path, _ = QtWidgets.QFileDialog.getSaveFileName(
+                self, "Lưu video", "video.mp4", "Video Files (*.mp4)"
+            )
+            if save_path:
+                with open(save_path, 'wb') as f:
+                    f.write(base64.b64decode(self.video_data))
+                _show_styled_message(self, 'information', "Thành công", "Đã lưu video thành công!")
+        except Exception as e:
+            _show_styled_message(self, 'critical', "Lỗi", f"Không thể lưu video: {e}")
 
 # ====================================================================
 # CLASS MAIN VIEW CHÍNH - ĐÃ SỬA LỖI CRASH UI THREAD
@@ -1104,6 +1424,15 @@ class MainView(QtWidgets.QMainWindow):
         self.btn_img.clicked.connect(self.send_image)
         inp_layout.addWidget(self.btn_img)
         
+        # Camera button - Capture photo directly
+        self.btn_camera = QtWidgets.QPushButton("📷")
+        self.btn_camera.setFixedSize(44, 44)
+        self.btn_camera.setToolTip("Chụp ảnh")
+        self.btn_camera.setCursor(QtCore.Qt.PointingHandCursor)
+        self.btn_camera.setStyleSheet(floating_btn_style)
+        self.btn_camera.clicked.connect(self.capture_photo)
+        inp_layout.addWidget(self.btn_camera)
+        
         # Video button - Neumorphic floating
         self.btn_vid = QtWidgets.QPushButton("🎬")
         self.btn_vid.setFixedSize(44, 44)
@@ -1121,6 +1450,15 @@ class MainView(QtWidgets.QMainWindow):
         self.btn_file.setStyleSheet(floating_btn_style)
         self.btn_file.clicked.connect(self.send_file)
         inp_layout.addWidget(self.btn_file)
+
+        # Location button - Send current location
+        self.btn_location = QtWidgets.QPushButton("📍")
+        self.btn_location.setFixedSize(44, 44)
+        self.btn_location.setToolTip("Gửi vị trí hiện tại")
+        self.btn_location.setCursor(QtCore.Qt.PointingHandCursor)
+        self.btn_location.setStyleSheet(floating_btn_style)
+        self.btn_location.clicked.connect(self.send_location)
+        inp_layout.addWidget(self.btn_location)
 
         # Mic button - Neumorphic floating
         self.btn_mic = QtWidgets.QPushButton("🎤")
@@ -1679,15 +2017,8 @@ class MainView(QtWidgets.QMainWindow):
                 f"background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 {'#667eea' if is_self else '#7f8c8d'}, stop:1 {'#764ba2' if is_self else '#95a5a6'}); border-radius: 15px;")
             content_layout.addWidget(msg_widget)
         elif is_image:
-            lbl_img = QtWidgets.QLabel()
-            try:
-                p = QtGui.QPixmap()
-                p.loadFromData(base64.b64decode(message))
-                lbl_img.setPixmap(p.scaled(250, 250, QtCore.Qt.AspectRatioMode.KeepAspectRatio, QtCore.Qt.TransformationMode.SmoothTransformation))
-            except:
-                lbl_img.setText("Lỗi ảnh")
-            lbl_img.setStyleSheet("border-radius: 10px;")
-            content_layout.addWidget(lbl_img)
+            msg_widget = ImageMessageWidget(message, is_self)
+            content_layout.addWidget(msg_widget)
         else:
             lbl_msg = QtWidgets.QLabel(message)
             lbl_msg.setWordWrap(True)
@@ -1788,6 +2119,23 @@ class MainView(QtWidgets.QMainWindow):
                     )
         except Exception as e:
             print(e)
+
+    def capture_photo(self):
+        """Mở dialog chụp ảnh từ camera."""
+        if not self.current_receiver_id:
+            return
+        dialog = CameraCaptureDialog(self)
+        dialog.photo_ready.connect(self._on_photo_captured)
+        dialog.exec()
+    
+    def _on_photo_captured(self, image_data_b64):
+        """Xử lý khi user chụp và confirm ảnh."""
+        if self.current_mode == "user":
+            self.controller.send_image(self.current_receiver_id, image_data_b64, "camera_capture.jpg")
+            self.add_message_to_chat(image_data_b64, "Bạn", True, is_image=True, avatar_base64=self.self_avatar)
+        else:
+            self.controller.send_group_message(self.current_receiver_id, "", is_image=True, image_data=image_data_b64)
+            self.add_message_to_chat(image_data_b64, "Bạn", True, is_image=True, avatar_base64=self.self_avatar)
 
     def send_image(self):
         if not self.current_receiver_id: return
@@ -1893,6 +2241,71 @@ class MainView(QtWidgets.QMainWindow):
         except Exception as e:
             print(f"Lỗi gửi file: {e}")
             QtWidgets.QMessageBox.critical(self, "Lỗi", f"Không thể gửi file: {e}")
+
+    def send_location(self):
+        """Gửi vị trí hiện tại của người dùng."""
+        if not self.current_receiver_id: 
+            return
+        
+        self.btn_location.setEnabled(False)
+        self.btn_location.setText("⏳")
+        
+        def get_location():
+            try:
+                import geocoder
+                g = geocoder.ip('me')
+                if g.ok:
+                    return {
+                        "success": True,
+                        "lat": g.latlng[0],
+                        "lng": g.latlng[1],
+                        "address": g.address or g.city or "Không xác định"
+                    }
+                else:
+                    return {"success": False, "error": "Không thể lấy vị trí"}
+            except Exception as e:
+                return {"success": False, "error": str(e)}
+        
+        def on_location_ready(result):
+            self.btn_location.setEnabled(True)
+            self.btn_location.setText("📍")
+            
+            if result.get("success"):
+                lat = result["lat"]
+                lng = result["lng"]
+                address = result["address"]
+                
+                # Tạo message JSON chứa thông tin vị trí
+                location_data = json.dumps({
+                    "type": "location",
+                    "lat": lat,
+                    "lng": lng,
+                    "address": address
+                })
+                
+                if self.current_mode == "user":
+                    # Gửi như tin nhắn thường (server sẽ lưu và chuyển tiếp)
+                    self.controller.send_message(self.current_receiver_id, location_data)
+                    # Hiển thị ngay trên giao diện
+                    self.add_message_to_chat(location_data, "Bạn", True, is_location=True, avatar_base64=self.self_avatar)
+                else:
+                    # Group chat
+                    self.controller.send_group_message(self.current_receiver_id, location_data)
+                    self.add_message_to_chat(location_data, "Bạn", True, is_location=True, avatar_base64=self.self_avatar)
+            else:
+                _show_styled_message(self, 'warning', "Không thể lấy vị trí", result.get("error", "Lỗi không xác định"))
+        
+        # Run in thread
+        class LocationWorker(QtCore.QThread):
+            finished = QtCore.Signal(dict)
+            
+            def run(self):
+                result = get_location()
+                self.finished.emit(result)
+        
+        self.location_worker = LocationWorker()
+        self.location_worker.finished.connect(on_location_ready)
+        self.location_worker.start()
 
     def start_call(self):
         if not self.current_receiver_id:
