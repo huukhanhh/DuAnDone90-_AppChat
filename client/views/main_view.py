@@ -2530,7 +2530,91 @@ class MainView(QtWidgets.QMainWindow):
         self.btn_location_header.setText("⏳")
         
         def get_location():
+            """
+            Lấy vị trí chính xác bằng nhiều phương pháp:
+            1. PowerShell + Windows Location API (chính xác nhất, dùng GPS/WiFi)
+            2. ipinfo.io (IP geolocation, fallback)
+            3. geocoder.ip (last fallback)
+            """
             try:
+                # === METHOD 1: PowerShell + Windows Location API ===
+                try:
+                    import subprocess
+                    import sys
+                    
+                    if sys.platform == 'win32':
+                        # PowerShell script để lấy vị trí từ Windows Location API
+                        ps_script = '''
+Add-Type -AssemblyName System.Device
+$watcher = New-Object System.Device.Location.GeoCoordinateWatcher
+$watcher.Start()
+$count = 0
+while ($watcher.Status -ne "Ready" -and $count -lt 50) {
+    Start-Sleep -Milliseconds 100
+    $count++
+}
+if ($watcher.Status -eq "Ready") {
+    $coord = $watcher.Position.Location
+    if ($coord.Latitude -ne [double]::NaN) {
+        Write-Output "$($coord.Latitude),$($coord.Longitude)"
+    }
+}
+$watcher.Stop()
+'''
+                        result = subprocess.run(
+                            ["powershell", "-ExecutionPolicy", "Bypass", "-Command", ps_script],
+                            capture_output=True, text=True, timeout=8,
+                            creationflags=subprocess.CREATE_NO_WINDOW
+                        )
+                        
+                        output = result.stdout.strip()
+                        if output and ',' in output:
+                            parts = output.split(',')
+                            if len(parts) == 2:
+                                lat, lng = float(parts[0]), float(parts[1])
+                                
+                                # Reverse geocode để lấy địa chỉ
+                                import geocoder
+                                g = geocoder.osm([lat, lng], method='reverse')
+                                address = g.address if g.ok else f"Lat: {lat:.6f}, Lng: {lng:.6f}"
+                                
+                                return {
+                                    "success": True,
+                                    "lat": lat,
+                                    "lng": lng,
+                                    "address": address,
+                                    "method": "Windows GPS"
+                                }
+                except Exception as e:
+                    print(f"[Location] PowerShell Windows API failed: {e}")
+                
+                # === METHOD 2: WiFi-based via ipinfo.io (free, better than IP) ===
+                try:
+                    import requests
+                    
+                    # ipinfo.io cho kết quả chính xác hơn geocoder.ip('me')
+                    response = requests.get('https://ipinfo.io/json', timeout=5)
+                    if response.status_code == 200:
+                        data = response.json()
+                        loc = data.get('loc', '').split(',')
+                        if len(loc) == 2:
+                            lat, lng = float(loc[0]), float(loc[1])
+                            city = data.get('city', '')
+                            region = data.get('region', '')
+                            country = data.get('country', '')
+                            address = ', '.join(filter(None, [city, region, country])) or "Không xác định"
+                            
+                            return {
+                                "success": True,
+                                "lat": lat,
+                                "lng": lng,
+                                "address": address,
+                                "method": "IP Geolocation"
+                            }
+                except Exception as e:
+                    print(f"[Location] ipinfo.io failed: {e}")
+                
+                # === METHOD 3: Fallback to geocoder (least accurate) ===
                 import geocoder
                 g = geocoder.ip('me')
                 if g.ok:
@@ -2538,10 +2622,12 @@ class MainView(QtWidgets.QMainWindow):
                         "success": True,
                         "lat": g.latlng[0],
                         "lng": g.latlng[1],
-                        "address": g.address or g.city or "Không xác định"
+                        "address": g.address or g.city or "Không xác định",
+                        "method": "IP Fallback"
                     }
                 else:
-                    return {"success": False, "error": "Không thể lấy vị trí"}
+                    return {"success": False, "error": "Không thể lấy vị trí từ bất kỳ nguồn nào"}
+                    
             except Exception as e:
                 return {"success": False, "error": str(e)}
         

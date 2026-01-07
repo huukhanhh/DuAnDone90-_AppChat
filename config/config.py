@@ -9,14 +9,14 @@ _config_dir = os.path.dirname(os.path.abspath(__file__))
 _project_root = os.path.dirname(_config_dir)
 BADWORDS_PATH = os.path.join(_project_root, "common", "moderation", "badwords.txt")
 DATABASE_CONFIG = {
-    "host": "127.0.0.1",
+    "host": "172.21.1.35",
     "user": "root",
-    "password": "123456",
-    "database": "appchat"
+    "password": "root",
+    "database": "chat_app"
 }
 
 SERVER_CONFIG = {
-    "host": "172.21.1.30",  # IP chung
+    "host": "172.21.1.35",  # IP chung
     "port": 5001         # Port cho socket TCP
 }
 
